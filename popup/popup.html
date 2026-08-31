@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JobMaxxing</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="hdr">
+        <div>
+          <h1>JobMaxxing</h1>
+          <p id="session-label" class="sub">Checking session…</p>
+        </div>
+      </header>
+
+      <section id="login-view" class="view hidden">
+        <p class="lead">Sign in with the same account you use on JobMaxxing.</p>
+        <label>Email<input id="email" type="email" autocomplete="username" /></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" /></label>
+        <p id="login-error" class="error hidden"></p>
+        <button id="sign-in" class="primary" type="button">Sign in</button>
+      </section>
+
+      <section id="home-view" class="view hidden">
+        <div class="actions">
+          <button id="grab-page" class="primary" type="button">Grab this page</button>
+          <button id="add-manual" type="button">Add manually</button>
+          <button id="open-app" type="button">Open JobMaxxing</button>
+        </div>
+
+        <div id="form-panel" class="form-panel hidden">
+          <h2 id="form-title">Save application</h2>
+          <label>Company<input id="f-company" type="text" /></label>
+          <label>Role<input id="f-title" type="text" /></label>
+          <label>Location<input id="f-location" type="text" /></label>
+          <label>Applied<input id="f-date" type="date" /></label>
+          <label>Status
+            <select id="f-status">
+              <option value="saved">Saved</option>
+              <option value="applied">Applied</option>
+              <option value="oa">OA</option>
+              <option value="interview">Interview</option>
+              <option value="offer">Offer</option>
+              <option value="rejected">Rejected</option>
+              <option value="ghosted">Ghosted</option>
+            </select>
+          </label>
+          <label>Recruiting season
+            <select id="f-season">
+              <option value="">Unassigned</option>
+              <option value="Summer 2027">Summer 2027</option>
+              <option value="Winter 2027">Winter 2027</option>
+            </select>
+          </label>
+          <label>Description<textarea id="f-desc" rows="6"></textarea></label>
+          <label>Notes<textarea id="f-notes" rows="2"></textarea></label>
+          <p id="form-msg" class="msg hidden"></p>
+          <div class="form-actions">
+            <button id="cancel-form" type="button">Cancel</button>
+            <button id="save-form" class="primary" type="button">Save</button>
+          </div>
+        </div>
+
+        <div class="recent">
+          <div class="recent-hdr">
+            <h2>Recent</h2>
+            <button id="refresh-recent" type="button" class="linkish">Refresh</button>
+          </div>
+          <ul id="recent-list" class="recent-list"></ul>
+        </div>
+
+        <button id="sign-out" class="linkish sign-out" type="button">Sign out</button>
+      </section>
+    </div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

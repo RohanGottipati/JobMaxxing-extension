@@ -1,0 +1,136 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: #111827;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  width: 360px;
+  min-height: 420px;
+  background: #f8fafc;
+}
+
+.app { padding: 14px; }
+
+.hdr h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.view { display: grid; gap: 12px; }
+.hidden { display: none !important; }
+
+.lead { margin: 0; color: #475569; line-height: 1.5; }
+
+label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+
+textarea { resize: vertical; }
+
+button {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.primary {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+  font-weight: 600;
+}
+
+button.linkish {
+  border: none;
+  background: none;
+  color: #1d4ed8;
+  padding: 0;
+}
+
+.actions { display: grid; gap: 8px; }
+
+.form-panel {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  display: grid;
+  gap: 10px;
+}
+
+.form-panel h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.recent-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.recent h2 {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.recent-list li button {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 2px;
+}
+
+.recent-list .title { font-weight: 600; }
+.recent-list .meta { font-size: 12px; color: #64748b; }
+
+.error, .msg.error { color: #b91c1c; font-size: 12px; }
+.msg.ok { color: #047857; font-size: 12px; }
+.msg.warn { color: #b45309; font-size: 12px; }
+
+.sign-out { margin-top: 4px; }
