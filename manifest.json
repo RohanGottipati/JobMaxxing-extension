@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "JobMaxxing",
-  "version": "1.0.0",
-  "description": "Capture job postings from the web and save them to your JobMaxxing account.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "version": "1.1.0",
+  "description": "Capture job postings and track your applications with JobMaxxing.",
+  "permissions": ["storage", "activeTab", "scripting", "alarms"],
   "host_permissions": [
     "*://*.linkedin.com/*",
     "*://*.myworkdayjobs.com/*",

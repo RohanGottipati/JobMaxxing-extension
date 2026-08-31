@@ -16,7 +16,7 @@ async function apiFetch(path, options = {}) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error?.message || `Request failed (${response.status})`;
+    const message = data?.error?.message || data?.message || `Request failed (${response.status})`;
     const error = new Error(message);
     error.status = response.status;
     error.payload = data;
@@ -32,8 +32,32 @@ export async function saveApplication(payload) {
   });
 }
 
-export async function getRecentApplications(limit = 10) {
-  return apiFetch(`/api/extension/applications?limit=${limit}`);
+export async function updateApplication(payload) {
+  const { id, ...rest } = payload;
+  return apiFetch(`/api/extension/applications/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(rest),
+  });
+}
+
+export async function getApplications({ full = false, limit } = {}) {
+  const params = new URLSearchParams();
+  if (full) params.set('full', 'true');
+  if (limit) params.set('limit', String(limit));
+  const query = params.toString();
+  return apiFetch(`/api/extension/applications${query ? `?${query}` : ''}`);
+}
+
+export async function getApplication(id) {
+  return apiFetch(`/api/extension/applications/${id}`);
+}
+
+export async function deleteApplication(id) {
+  return apiFetch(`/api/extension/applications/${id}`, { method: 'DELETE' });
+}
+
+export async function wipeAllApplications() {
+  return apiFetch('/api/extension/applications', { method: 'DELETE' });
 }
 
 export async function analyzeApplication(applicationId, sourceText) {

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JobMaxxing — Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #2f4f45;
+      --green-dark: #243d36;
+      --green-soft: #e7f5ee;
+      --green-line: #c5d8cc;
+      --ink: #1b1b1b;
+      --muted: #605e5c;
+      --faint: #8a8886;
+      --line: #edebe9;
+      --pane: #faf9f8;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 14px; color: var(--ink); background: #fff;
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    }
+
+    /* ── Top bar ─────────────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 16px; height: 52px; flex-shrink: 0;
+      background: var(--green); color: #fff;
+    }
+    .brand { display: flex; align-items: baseline; gap: 8px; }
+    .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+    .brand .tag { font-size: 12px; color: rgba(255,255,255,0.82); }
+    .stats { display: flex; gap: 6px; margin-left: 6px; }
+    .stat-pill {
+      display: flex; align-items: baseline; gap: 5px;
+      background: rgba(255,255,255,0.16); border-radius: 999px; padding: 3px 10px;
+    }
+    .stat-pill .num { font-size: 13px; font-weight: 700; }
+    .stat-pill .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: rgba(255,255,255,0.85); }
+    .spacer { flex: 1; }
+    .controls { display: flex; align-items: center; gap: 8px; }
+    .search-wrap { position: relative; }
+    .search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; fill: var(--faint); }
+    .controls input[type="search"] {
+      padding: 6px 10px 6px 30px; border: 1px solid transparent; border-radius: 6px;
+      font-size: 13px; background: #fff; color: var(--ink); width: 220px;
+    }
+    .controls select {
+      padding: 6px 10px; border: 1px solid rgba(255,255,255,0.5); border-radius: 6px;
+      font-size: 13px; background: #fff; color: #374151; cursor: pointer;
+    }
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 6px; border: none;
+      background: transparent; cursor: pointer; color: #fff;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.16); }
+    .icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+    /* ── Layout: rail + list + reading pane ──────────────────── */
+    .layout { flex: 1; display: flex; min-height: 0; }
+    .rail {
+      width: 210px; flex-shrink: 0; border-right: 1px solid var(--line);
+      background: #fafafa; overflow-y: auto; padding: 12px 8px;
+    }
+    .rail-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--faint); padding: 4px 10px 8px;
+    }
+    .rail-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; text-align: left; border: none; background: none; cursor: pointer;
+      padding: 9px 10px; border-radius: 6px; font-size: 13px; color: var(--ink);
+      border-left: 3px solid transparent; margin-bottom: 2px; font-family: inherit;
+    }
+    .rail-item:hover { background: #f0f0f0; }
+    .rail-item.active { background: var(--green-soft); color: var(--green-dark); font-weight: 700; border-left-color: var(--green); }
+    .rail-count {
+      font-size: 11px; font-weight: 600; color: var(--muted); background: #e5e7eb;
+      border-radius: 999px; padding: 1px 8px; min-width: 22px; text-align: center;
+    }
+    .rail-item.active .rail-count { background: #c5d8cc; color: var(--green-dark); }
+    .list-pane {
+      width: 400px; flex-shrink: 0; border-right: 1px solid var(--line);
+      background: #fff; overflow-y: auto;
+    }
+    .list-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px 6px; position: sticky; top: 0; background: #fff; z-index: 2;
+    }
+    .list-header .h { font-size: 15px; font-weight: 700; }
+    .list-header .c { font-size: 12px; color: var(--muted); }
+
+    .group-head {
+      font-size: 12px; font-weight: 700; color: var(--green-dark);
+      padding: 8px 16px 4px; background: #fff; position: sticky; top: 40px; z-index: 1;
+    }
+
+    .row {
+      position: relative;
+      display: flex; gap: 12px; padding: 10px 14px 10px 13px;
+      border-bottom: 1px solid var(--line); cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+    .row:hover { background: #f5f5f5; }
+    .row.selected { background: var(--green-soft); border-left-color: var(--green); }
+    .row-del {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 30px; height: 30px; border-radius: 6px; border: none; background: #fff;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      color: #b91c1c; opacity: 0; pointer-events: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.18); transition: opacity 0.12s, background 0.12s;
+    }
+    .row:hover .row-del { opacity: 1; pointer-events: auto; }
+    .row-del:hover { background: #fee2e2; }
+    .row-del svg { width: 16px; height: 16px; fill: currentColor; }
+    .row:hover .row-date { opacity: 0; }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 14px; font-weight: 700;
+    }
+    .row-main { flex: 1; min-width: 0; }
+    .row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .row-company { font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-date { font-size: 12px; color: var(--faint); flex-shrink: 0; }
+    .row-title { font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .row-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .row-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .chip { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; letter-spacing: 0.3px; text-transform: uppercase; flex-shrink: 0; }
+    .chip-applied   { background: #dbeafe; color: #1e40af; }
+    .chip-oa        { background: #fef3c7; color: #92400e; }
+    .chip-interview { background: #e8efe9; color: #1f3830; }
+    .chip-offer     { background: #dcfce7; color: #166534; }
+    .chip-rejected  { background: #fee2e2; color: #991b1b; }
+    .chip-ghosted   { background: #f3f4f6; color: #4b5563; }
+
+    .list-empty { padding: 40px 20px; text-align: center; color: var(--faint); font-size: 13px; }
+
+    /* ── Reading pane ────────────────────────────────────────── */
+    .read-pane { flex: 1; min-width: 0; background: var(--pane); overflow-y: auto; }
+    .read-empty {
+      height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: var(--muted); gap: 10px; text-align: center;
+    }
+    .read-empty svg { width: 120px; height: 120px; opacity: 0.9; }
+    .read-empty .t { font-size: 15px; font-weight: 600; color: var(--ink); }
+    .read-empty .s { font-size: 13px; color: var(--faint); }
+
+    .reader { max-width: 860px; margin: 0; padding: 28px 36px; }
+    .reader-head { display: flex; gap: 16px; align-items: flex-start; }
+    .reader-head .avatar { width: 48px; height: 48px; font-size: 16px; }
+    .reader-titles { flex: 1; min-width: 0; }
+    .reader-title { font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+    .reader-company { font-size: 15px; color: var(--muted); margin-top: 2px; }
+    .reader-metarow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .reader-metarow .dot-sep { color: var(--faint); }
+    .reader-meta-item { font-size: 12px; color: var(--muted); }
+
+    .reader-actions { display: flex; flex-wrap: wrap; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .action { display: flex; flex-direction: column; gap: 4px; }
+    .action label { font-size: 11px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: 0.4px; }
+    .action select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: #fff; color: #374151; cursor: pointer; min-width: 150px; }
+    .action select:focus { outline: 2px solid var(--green); outline-offset: 1px; border-color: transparent; }
+
+    .reader-body { padding-top: 20px; }
+    .reader-body h3 { font-size: 12px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .reader-desc { font-size: 14px; color: #2d2d2d; line-height: 1.7; white-space: pre-wrap; }
+    .reader-nodesc { font-size: 13px; color: var(--faint); font-style: italic; }
+
+    /* ── Settings drawer ─────────────────────────────────────── */
+    .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 30; }
+    .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+    .drawer { position: fixed; top: 0; right: 0; height: 100vh; width: 380px; max-width: 92vw; background: #fff; border-left: 1px solid var(--line); box-shadow: -8px 0 32px rgba(0,0,0,0.18); transform: translateX(100%); transition: transform 0.24s ease; z-index: 31; display: flex; flex-direction: column; }
+    .drawer.open { transform: translateX(0); }
+    .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--green); color: #fff; flex-shrink: 0; }
+    .drawer-head h2 { font-size: 16px; font-weight: 700; }
+    .drawer-close { background: none; border: none; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    .drawer-close:hover { background: rgba(255,255,255,0.2); }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: var(--pane); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+    .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--ink); }
+    .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; border: none; }
+    .btn-primary { background: var(--green); color: #fff; } .btn-primary:hover { background: var(--green-dark); }
+    .btn-secondary { background: #f3f4f6; color: #374151; } .btn-secondary:hover { background: #e5e7eb; }
+    .btn-danger { background: #fff; color: #dc2626; border: 1px solid #fca5a5; } .btn-danger:hover { background: #fef2f2; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .field { margin-bottom: 14px; } .field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    .field input[type="number"] { width: 80px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+    .field .hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+    .toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; } .toggle input[type="checkbox"] { width: 36px; height: 20px; accent-color: var(--green); }
+    #status-msg { font-size: 12px; color: var(--green); margin-top: 6px; display: none; }
+    .danger-zone { border-color: #fca5a5; background: #fffafa; } .danger-zone h3 { color: #dc2626; }
+    .muted-note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .login-screen { display:flex; align-items:center; justify-content:center; height:100vh; background:var(--pane); }
+    .login-card { width:min(360px, 92vw); background:#fff; border:1px solid var(--line); border-radius:12px; padding:24px; display:grid; gap:12px; }
+    .login-card h1 { font-size:22px; color:var(--green); }
+    .login-card input { width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; }
+    .login-error { color:#dc2626; font-size:12px; display:none; }
+    #app-view { display:flex; flex-direction:column; height:100vh; }
+  </style>
+</head>
+<body>
+  <div id="login-view" class="login-screen" style="display:none">
+    <div class="login-card">
+      <h1>JobMaxxing</h1>
+      <p class="muted-note">Sign in to open your application dashboard.</p>
+      <label>Email<input id="login-email" type="email" autocomplete="username"></label>
+      <label>Password<input id="login-password" type="password" autocomplete="current-password"></label>
+      <p id="login-error" class="login-error"></p>
+      <button class="btn btn-primary" id="btn-sign-in" type="button">Sign in</button>
+    </div>
+  </div>
+
+  <div id="app-view" style="display:none">
+  <header class="topbar">
+    <div class="brand"><h1>JobMaxxing</h1><span class="tag">Applications</span></div>
+    <div class="stats">
+      <div class="stat-pill"><span class="num" id="stat-total">—</span><span class="lbl">Total</span></div>
+      <div class="stat-pill"><span class="num" id="stat-active">—</span><span class="lbl">Active</span></div>
+      <div class="stat-pill"><span class="num" id="stat-offers">—</span><span class="lbl">Offers</span></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="controls">
+      <div class="search-wrap">
+        <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+        <input id="search" type="search" placeholder="Search title or company…" autocomplete="off">
+      </div>
+      <button class="icon-btn" id="btn-open-web" title="Open JobMaxxing web app">
+        <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.94 4.06a6.02 6.02 0 00-3.2 2.44h1.98c.24-.9.58-1.7.98-2.35a6.1 6.1 0 00.24-.09zM7.3 8.5c.05-.72.16-1.4.32-2H4.6a5.96 5.96 0 00-.55 2H7.3zm0 1H4.05c.08.71.27 1.38.55 2H7.6a13.6 13.6 0 01-.3-2zm1 0c.05.72.16 1.4.31 2h2.78c.15-.6.26-1.28.31-2H8.3zm3.4-1c-.05-.72-.16-1.4-.32-2H8.62c-.16.6-.27 1.28-.32 2h3.4zm1 1c-.05.72-.15 1.4-.3 2h2.99c.28-.62.47-1.29.55-2h-3.24zm2.56-3a6.02 6.02 0 00-3.2-2.44c.09.03.16.06.24.09.4.65.74 1.45.98 2.35h1.98zM10 4.24c-.44.5-.86 1.3-1.14 2.26h2.28C10.86 5.54 10.44 4.74 10 4.24zm0 11.52c.44-.5.86-1.3 1.14-2.26H8.86c.28.96.7 1.76 1.14 2.26zm-1.06.18a6.02 6.02 0 01-3.2-2.44h1.98c.24.9.58 1.7.98 2.35a6.1 6.1 0 01-.24.09h.48zm2.12 0h.48a6.1 6.1 0 01-.24-.09c.4-.65.74-1.45.98-2.35h1.98a6.02 6.02 0 01-3.2 2.44z" clip-rule="evenodd"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-settings" title="Settings">
+        <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" id="rail"></nav>
+    <div class="list-pane">
+      <div class="list-header"><span class="h">Applications</span><span class="c" id="list-count"></span></div>
+      <div id="list"></div>
+    </div>
+    <div class="read-pane" id="read-pane"></div>
+  </div>
+
+  <!-- Settings drawer -->
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <h2>Settings</h2>
+      <button class="drawer-close" id="drawer-close" title="Close">&#x2715;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="card">
+        <h3>Export &amp; Import</h3>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="btn-export-json">Export JSON</button>
+          <button class="btn btn-secondary" id="btn-export-csv">Export CSV</button>
+          <label class="btn btn-secondary" style="cursor:pointer">
+            Import JSON
+            <input type="file" id="import-file" accept=".json" style="display:none">
+          </label>
+        </div>
+        <div id="status-msg"></div>
+      </div>
+      <div class="card">
+        <h3>Follow-up Reminders</h3>
+        <label class="toggle">
+          <input type="checkbox" id="followup-enabled">
+          <span>Enable follow-up nudges for "Applied" applications</span>
+        </label>
+        <div class="field" style="margin-top:12px">
+          <label for="followup-days">Remind after (days)</label>
+          <input type="number" id="followup-days" min="1" max="90" value="10">
+          <div class="hint">A notification will appear if your application is still in "Applied" status after this many days.</div>
+        </div>
+        <button class="btn btn-primary" id="btn-save-prefs">Save Preferences</button>
+      </div>
+      <div class="card">
+        <h3>Advanced</h3>
+        <div class="btn-row"><button class="btn btn-secondary" id="btn-repair">Refresh from Supabase</button></div>
+        <p class="muted-note">Reloads the application list from the database.</p>
+      </div>
+      <div class="card danger-zone">
+        <h3>Danger Zone</h3>
+        <div class="btn-row"><button class="btn btn-danger" id="btn-wipe">Wipe All Data</button></div>
+        <p class="muted-note">Permanently deletes all tracked applications. Export first!</p>
+      </div>
+    </div>
+  </aside>
+  </div>
+
+  <script src="options.js" type="module"></script>
+</body>
+</html>

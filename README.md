@@ -1,39 +1,37 @@
 # JobMaxxing Chrome Extension
 
-Capture job postings from LinkedIn, Workday, Greenhouse, Lever, Ashby, and other sites — then save them to your [JobMaxxing](https://jobmaxxing.app) account with duplicate detection and optional server-side job analysis.
+Chrome extension forked from [JobTrack](https://github.com/zhao0524/JobTrack), rebranded for JobMaxxing and synced to your JobMaxxing account via authenticated API routes.
+
+## Features
+
+- **Track Job** pill on LinkedIn, Workday, Greenhouse, Lever, and Ashby
+- Popup: Grab This Page, Add Manually, Combine PDFs, application count
+- **Dashboard** (`options/options.html`): term rail, searchable list, reading pane, status/season edits
+- Settings drawer: export/import JSON & CSV, follow-up reminders, refresh, wipe
+- Duplicate detection and optional server-side job analysis (when AI consent is enabled)
 
 ## Setup
 
-1. Copy `config.example.js` to `config.local.js` and fill in the same Supabase credentials as the JobMaxxing web app:
+1. Copy `config.example.js` → `config.local.js`:
 
 ```js
 export const SUPABASE_URL = 'https://your-project.supabase.co';
 export const SUPABASE_ANON_KEY = 'your-anon-key';
-export const APP_URL = 'https://jobmaxxing.app'; // or http://localhost:3000 for local dev
+export const APP_URL = 'https://jobmaxxing.app'; // or http://localhost:3000
 ```
 
-2. Ensure the JobMaxxing database migration `20260831160000_extension_capture_fields.sql` has been applied (`supabase db push` from the main repo).
+2. Apply JobMaxxing migrations (`npm run db:push` in the web repo).
 
-3. Load the extension in Chrome:
-   - Open `chrome://extensions`
-   - Enable **Developer mode**
-   - Click **Load unpacked** and select this folder
+3. Load unpacked in Chrome → select this folder.
 
-4. Sign in with the same email/password you use on JobMaxxing.
+4. Sign in with your JobMaxxing email/password in the popup or dashboard.
 
 ## Usage
 
-- On supported job boards, click the blue **Track Job** pill → review the pre-filled form → **Save Application**
-- On any page, open the popup → **Grab this page** or **Add manually**
-- Recent applications appear in the popup; click one to open it in JobMaxxing
-- When AI consent is enabled on your profile, saving triggers server-side job parsing automatically
-
-## Architecture
-
-- **Auth:** Supabase Auth REST API; session stored in `chrome.storage.local`
-- **Data:** JobMaxxing API routes (`/api/extension/applications`) with Bearer JWT
-- **AI:** Server-side only via `POST /api/extension/applications/[id]/analyze` — no Gemini key in the extension
+- **Popup** — quick capture, PDF merge, link to dashboard
+- **Dashboard** — browse/filter applications; click **Open in JobMaxxing** for full AI workflows
+- **Content pill** — capture directly from supported job boards
 
 ## Related repo
 
-Web app and database migrations live in [JobMaxxing](https://github.com/rohangottipati/JobMaxxing).
+Web app and API: [JobMaxxing](https://github.com/RohanGottipati/JobMaxxing)

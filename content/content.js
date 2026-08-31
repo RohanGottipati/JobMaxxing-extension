@@ -29,12 +29,12 @@
     const style = document.createElement('style');
     style.textContent = `
       button {
-        display:flex;align-items:center;gap:6px;background:#1d4ed8;color:#fff;
+        display:flex;align-items:center;gap:6px;background:#2f4f45;color:#fff;
         border:none;border-radius:24px;padding:10px 18px;font-size:14px;
         font-family:system-ui,sans-serif;font-weight:600;cursor:pointer;
-        box-shadow:0 4px 16px rgba(29,78,216,0.35);transition:background 0.15s,transform 0.1s;
+        box-shadow:0 4px 16px rgba(47,79,69,0.35);transition:background 0.15s,transform 0.1s;
       }
-      button:hover{background:#1e40af;transform:scale(1.04);}
+      button:hover{background:#243d36;transform:scale(1.04);}
       button:active{transform:scale(0.97);}
       svg{width:16px;height:16px;fill:currentColor;flex-shrink:0;}
     `;
@@ -57,18 +57,18 @@
     style.textContent = `
       *,*::before,*::after{box-sizing:border-box;}
       .panel{display:flex;flex-direction:column;height:100vh;background:#fff;box-shadow:-4px 0 32px rgba(0,0,0,0.18);overflow:hidden;font-family:system-ui,-apple-system,sans-serif;}
-      .hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#1d4ed8;color:#fff;flex-shrink:0;}
+      .hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#2f4f45;color:#fff;flex-shrink:0;}
       .hdr h2{margin:0;font-size:16px;font-weight:700;}
       .cls{background:none;border:none;color:#fff;cursor:pointer;font-size:22px;line-height:1;padding:2px 6px;border-radius:4px;}
       .cls:hover{background:rgba(255,255,255,0.2);}
       .body{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;}
       label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;}
       input,select,textarea{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-family:inherit;color:#111827;background:#fff;}
-      input:focus,select:focus,textarea:focus{outline:2px solid #1d4ed8;outline-offset:1px;border-color:transparent;}
+      input:focus,select:focus,textarea:focus{outline:2px solid #2f4f45;outline-offset:1px;border-color:transparent;}
       textarea{resize:vertical;min-height:160px;line-height:1.5;}
       .ftr{padding:14px 20px;border-top:1px solid #e5e7eb;display:flex;gap:10px;flex-shrink:0;}
-      .save{flex:1;padding:10px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;}
-      .save:hover{background:#1e40af;}
+      .save{flex:1;padding:10px;background:#2f4f45;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;}
+      .save:hover{background:#243d36;}
       .cancel{padding:10px 16px;background:#f3f4f6;color:#374151;border:none;border-radius:6px;font-size:14px;cursor:pointer;}
       .cancel:hover{background:#e5e7eb;}
       .msg{border-radius:6px;padding:10px 12px;font-size:13px;display:none;}
@@ -123,15 +123,15 @@
         return;
       }
 
-      const payload = {
-        companyName: company,
-        roleTitle: title,
-        location: g('p-location').value.trim() || null,
-        dateApplied: g('p-date').value || today,
+      const app = {
+        title,
+        company,
+        location: g('p-location').value.trim(),
+        appliedAt: g('p-date').value || today,
         status: g('p-status').value,
-        recruitingSeason: g('p-season').value || null,
-        jobDescription: g('p-desc').value.trim() || null,
-        notes: g('p-notes').value.trim() || null,
+        season: g('p-season').value || null,
+        description: g('p-desc').value.trim(),
+        notes: g('p-notes').value.trim(),
         sourceHost: scraped.sourceHost || location.hostname,
         jobUrl: scraped.jobUrl || location.href,
       };
@@ -141,7 +141,7 @@
         return;
       }
 
-      const res = await safeSend({ type: 'SAVE_APPLICATION', app: payload });
+      const res = await safeSend({ type: 'SAVE_APPLICATION', app });
       if (!res) {
         showMsg('Could not save — refresh this page and try again.', 'error');
         return;
@@ -150,8 +150,8 @@
         showMsg(res.error, 'error');
         return;
       }
-      if (res.duplicate) {
-        showMsg(`Duplicate: ${res.duplicate.roleTitle} at ${res.duplicate.companyName}`, 'warn');
+      if (res.dupe) {
+        showMsg(`Duplicate: ${res.dupe.roleTitle || res.dupe.title} at ${res.dupe.companyName || res.dupe.company}`, 'warn');
         return;
       }
       if (res.analyzeError) {

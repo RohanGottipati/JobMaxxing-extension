@@ -9,19 +9,14 @@ const STATUS_TO_API = {
 };
 
 export function toApiStatus(status) {
-  return STATUS_TO_API[status] ?? 'saved';
+  return STATUS_TO_API[status] ?? 'applied';
 }
 
-export function formatStatusLabel(status) {
-  const labels = {
-    saved: 'Saved',
-    applied: 'Applied',
-    online_assessment: 'OA',
-    interview: 'Interview',
-    final_round: 'Final round',
-    offer: 'Offer',
-    rejected: 'Rejected',
-    withdrawn: 'Withdrawn',
-  };
-  return labels[status] ?? status;
-}
+export const STATUS_LABEL = {
+  applied: 'Applied',
+  oa: 'OA',
+  interview: 'Interview',
+  offer: 'Offer',
+  rejected: 'Rejected',
+  ghosted: 'Ghosted',
+};

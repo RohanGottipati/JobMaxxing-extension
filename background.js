@@ -1,11 +1,20 @@
 import { MSG } from './src/messages.js';
 import {
   analyzeApplication,
-  getRecentApplications,
-  saveApplication,
 } from './src/api/jobmaxxing.js';
 import { getCurrentUser, signIn, signOut } from './src/auth/session.js';
-import { toApiStatus } from './src/status-map.js';
+import {
+  deleteApplication,
+  getAllApplications,
+  getApplication,
+  getIndex,
+  repairIndex,
+  saveApplication,
+  updateApplication,
+  wipeAll,
+} from './src/storage.js';
+
+const ALARM_PREFIX = 'followup:';
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   handleMessage(msg, sender).then(sendResponse).catch((err) => {
@@ -14,6 +23,26 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   });
   return true;
 });
+
+async function requireUser() {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Authentication is required.');
+  return user;
+}
+
+async function maybeAnalyze(savedApp, sourceText) {
+  if (!savedApp?.id || !sourceText) return { analyzed: false, analyzeError: null };
+  try {
+    const result = await analyzeApplication(savedApp.id, sourceText);
+    if (result?.ok !== false) return { analyzed: true, analyzeError: null };
+    return { analyzed: false, analyzeError: 'Analysis unavailable' };
+  } catch (error) {
+    return {
+      analyzed: false,
+      analyzeError: error instanceof Error ? error.message : 'Analysis failed',
+    };
+  }
+}
 
 async function handleMessage(msg, sender) {
   switch (msg.type) {
@@ -33,53 +62,101 @@ async function handleMessage(msg, sender) {
     }
 
     case MSG.SAVE_APPLICATION: {
-      const app = msg.app;
-      const notes = app.status === 'ghosted' && app.notes
-        ? `[ghosted] ${app.notes}`
-        : app.notes;
+      await requireUser();
+      const app = { ...msg.app };
+      if (!app.id) app.id = crypto.randomUUID();
+      if (!app.appliedAt) app.appliedAt = new Date().toISOString().slice(0, 10);
 
       try {
-        const result = await saveApplication({
-          companyName: app.companyName,
-          roleTitle: app.roleTitle,
-          jobUrl: app.jobUrl ?? null,
-          location: app.location ?? null,
-          dateApplied: app.dateApplied ?? null,
-          status: toApiStatus(app.status ?? 'saved'),
-          jobDescription: app.jobDescription ?? null,
-          notes: notes ?? null,
-          sourceHost: app.sourceHost ?? null,
-          recruitingSeason: app.recruitingSeason ?? null,
-        });
-
-        let analyzed = false;
-        let analyzeError = null;
-        if (result.aiConsent && result.application?.id && app.jobDescription) {
-          try {
-            await analyzeApplication(result.application.id, app.jobDescription);
-            analyzed = true;
-          } catch (error) {
-            analyzeError = error instanceof Error ? error.message : 'Analysis failed';
-          }
+        const saved = await saveApplication(app);
+        if (saved?.duplicate) {
+          return { ok: true, app, dupe: saved.duplicate };
         }
 
-        return {
-          ok: true,
-          application: result.application,
-          analyzed,
-          analyzeError,
-        };
+        const prefs = await getPrefs();
+        if (prefs.followupEnabled && saved?.status === 'applied') {
+          scheduleFollowup(saved.id, prefs.followupDays);
+        }
+
+        const analyze = await maybeAnalyze(saved, app.description);
+        return { ok: true, app: saved, dupe: null, ...analyze };
       } catch (error) {
         if (error.status === 409 && error.payload?.duplicate) {
-          return { ok: false, duplicate: error.payload.duplicate };
+          return { ok: true, app, dupe: error.payload.duplicate };
         }
         throw error;
       }
     }
 
-    case MSG.GET_RECENT: {
-      const data = await getRecentApplications(msg.limit ?? 10);
-      return { ok: true, applications: data.applications };
+    case MSG.UPDATE_APPLICATION: {
+      await requireUser();
+      const existing = await getApplication(msg.app.id);
+      if (!existing) return { ok: false, error: 'Not found' };
+      const updated = { ...existing, ...msg.app };
+      const saved = await updateApplication(updated);
+      if (saved?.duplicate) return { ok: false, dupe: saved.duplicate };
+      if (saved?.status === 'applied') {
+        const prefs = await getPrefs();
+        if (prefs.followupEnabled) scheduleFollowup(saved.id, prefs.followupDays);
+      } else {
+        clearAlarm(saved.id);
+      }
+      return { ok: true, app: saved };
+    }
+
+    case MSG.DELETE_APPLICATION: {
+      await requireUser();
+      await deleteApplication(msg.id);
+      clearAlarm(msg.id);
+      return { ok: true };
+    }
+
+    case MSG.GET_INDEX: {
+      await requireUser();
+      return { ok: true, index: await getIndex() };
+    }
+
+    case MSG.GET_APPLICATION: {
+      await requireUser();
+      return { ok: true, app: await getApplication(msg.id) };
+    }
+
+    case MSG.GET_ALL: {
+      await requireUser();
+      return { ok: true, apps: await getAllApplications() };
+    }
+
+    case MSG.REPAIR_INDEX: {
+      await requireUser();
+      return { ok: true, index: await repairIndex() };
+    }
+
+    case MSG.EXPORT_JSON: {
+      await requireUser();
+      const apps = await getAllApplications();
+      return { ok: true, data: JSON.stringify(apps, null, 2) };
+    }
+
+    case MSG.IMPORT_JSON: {
+      await requireUser();
+      const apps = JSON.parse(msg.data);
+      for (const app of apps) {
+        if (!app.id) app.id = crypto.randomUUID();
+        await saveApplication(app);
+      }
+      return { ok: true, count: apps.length };
+    }
+
+    case MSG.WIPE_ALL: {
+      await requireUser();
+      await wipeAll();
+      const alarms = await chrome.alarms.getAll();
+      await Promise.all(
+        alarms
+          .filter((alarm) => alarm.name.startsWith(ALARM_PREFIX))
+          .map((alarm) => chrome.alarms.clear(alarm.name)),
+      );
+      return { ok: true };
     }
 
     case MSG.SCRAPE_TAB: {
@@ -93,14 +170,26 @@ async function handleMessage(msg, sender) {
         target: { tabId },
         func: () => globalThis.__jobMaxxingScrapePage?.() ?? null,
       });
-      return { ok: true, scraped: injection?.result ?? null };
+      const scraped = injection?.result;
+      if (!scraped) return { ok: true, scraped: null };
+      return {
+        ok: true,
+        scraped: {
+          title: scraped.title || '',
+          company: scraped.company || '',
+          location: scraped.location || '',
+          description: scraped.description || '',
+          sourceHost: scraped.sourceHost || '',
+          jobUrl: scraped.jobUrl || '',
+        },
+      };
     }
 
     case MSG.PAGE_DETECTED: {
       const tabId = sender.tab?.id;
       if (tabId) {
         chrome.action.setBadgeText({ text: 'NEW', tabId });
-        chrome.action.setBadgeBackgroundColor({ color: '#1d4ed8', tabId });
+        chrome.action.setBadgeBackgroundColor({ color: '#2f4f45', tabId });
       }
       return { ok: true };
     }
@@ -110,8 +199,56 @@ async function handleMessage(msg, sender) {
   }
 }
 
+async function getPrefs() {
+  const res = await chrome.storage.local.get('prefs');
+  const prefs = res.prefs || {};
+  return {
+    followupEnabled: prefs.followupEnabled ?? false,
+    followupDays: prefs.followupDays ?? 10,
+  };
+}
+
+function scheduleFollowup(appId, days) {
+  chrome.alarms.create(`${ALARM_PREFIX}${appId}`, {
+    delayInMinutes: days * 24 * 60,
+  });
+}
+
+function clearAlarm(appId) {
+  chrome.alarms.clear(`${ALARM_PREFIX}${appId}`);
+}
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (!alarm.name.startsWith(ALARM_PREFIX)) return;
+  const id = alarm.name.slice(ALARM_PREFIX.length);
+  try {
+    const app = await getApplication(id);
+    if (!app || app.status !== 'applied') return;
+    chrome.action.setBadgeText({ text: '!' });
+    chrome.action.setBadgeBackgroundColor({ color: '#b45309' });
+    chrome.action.setTitle({
+      title: `Follow up on: ${app.title} at ${app.company}`,
+    });
+  } catch {
+    // Session may have expired.
+  }
+});
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === 'loading') {
     chrome.action.setBadgeText({ text: '', tabId });
+  }
+});
+
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area !== 'local' || !changes.prefs) return;
+  const prefs = changes.prefs.newValue || {};
+  if (!prefs.followupEnabled) {
+    const alarms = await chrome.alarms.getAll();
+    await Promise.all(
+      alarms
+        .filter((alarm) => alarm.name.startsWith(ALARM_PREFIX))
+        .map((alarm) => chrome.alarms.clear(alarm.name)),
+    );
   }
 });

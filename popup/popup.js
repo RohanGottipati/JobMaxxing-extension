@@ -1,185 +1,275 @@
-import { MSG } from '../src/messages.js';
-import { APP_URL } from '../config.local.js';
-import { formatStatusLabel } from '../src/status-map.js';
+import { bindAuthForm } from '../src/auth-gate.js';
+import { MSG, send } from '../src/messages.js';
+import { openJobMaxxing } from '../src/api/jobmaxxing.js';
 
-const $ = (id) => document.getElementById(id);
+const SEASONS = ['Summer 2027', 'Winter 2027'];
+let editingId = null;
+let scrapedJobUrl = null;
 
-const loginView = $('login-view');
-const homeView = $('home-view');
-const sessionLabel = $('session-label');
-const loginError = $('login-error');
-const formPanel = $('form-panel');
-const formMsg = $('form-msg');
-const recentList = $('recent-list');
+const home = document.getElementById('home');
+const appCount = document.getElementById('app-count');
+const formView = document.getElementById('form-view');
+const formTitle = document.getElementById('form-title');
+const fId = document.getElementById('f-id');
+const fTitle = document.getElementById('f-title');
+const fCompany = document.getElementById('f-company');
+const fLocation = document.getElementById('f-location');
+const fDate = document.getElementById('f-date');
+const fStatus = document.getElementById('f-status');
+const fSeason = document.getElementById('f-season');
+const fDesc = document.getElementById('f-desc');
+const fNotes = document.getElementById('f-notes');
+const fDupe = document.getElementById('f-dupe');
+const btnDelete = document.getElementById('btn-delete');
+const mergeView = document.getElementById('merge-view');
 
-let scrapedContext = null;
+SEASONS.forEach((s) => fSeason.appendChild(new Option(s, s)));
 
-function show(el) { el.classList.remove('hidden'); }
-function hide(el) { el.classList.add('hidden'); }
-
-function send(type, payload = {}) {
-  return chrome.runtime.sendMessage({ type, ...payload });
-}
-
-async function refreshSession() {
-  const res = await send(MSG.GET_SESSION);
-  if (res?.signedIn) {
-    sessionLabel.textContent = res.email ?? 'Signed in';
-    hide(loginView);
-    show(homeView);
-    await loadRecent();
-    return;
-  }
-  sessionLabel.textContent = 'Sign in required';
-  show(loginView);
-  hide(homeView);
-}
-
-async function loadRecent() {
-  recentList.innerHTML = '<li class="meta">Loading…</li>';
+async function loadCount() {
   try {
-    const res = await send(MSG.GET_RECENT, { limit: 10 });
-    const apps = res?.applications ?? [];
-    if (!apps.length) {
-      recentList.innerHTML = '<li class="meta">No applications yet.</li>';
-      return;
-    }
-    recentList.innerHTML = apps.map((app) => `
-      <li>
-        <button type="button" data-id="${app.id}">
-          <span class="title">${escapeHtml(app.roleTitle)} · ${escapeHtml(app.companyName)}</span>
-          <span class="meta">${escapeHtml(formatStatusLabel(app.status))}</span>
-        </button>
-      </li>
-    `).join('');
-    recentList.querySelectorAll('button[data-id]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        chrome.tabs.create({ url: `${APP_URL}/applications/${btn.dataset.id}` });
-      });
-    });
-  } catch (error) {
-    recentList.innerHTML = `<li class="meta error">${escapeHtml(error.message)}</li>`;
+    const res = await send(MSG.GET_INDEX);
+    appCount.textContent = (res.index || []).length || '';
+  } catch {
+    appCount.textContent = '';
   }
 }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function openForm(scraped = null) {
-  scrapedContext = scraped;
-  $('f-company').value = scraped?.company ?? '';
-  $('f-title').value = scraped?.title ?? '';
-  $('f-location').value = scraped?.location ?? '';
-  $('f-desc').value = scraped?.description ?? '';
-  $('f-notes').value = '';
-  $('f-date').value = new Date().toISOString().slice(0, 10);
-  $('f-status').value = 'saved';
-  $('f-season').value = '';
-  hide(formMsg);
-  show(formPanel);
-}
-
-function closeForm() {
-  hide(formPanel);
-  scrapedContext = null;
-}
-
-function showFormMsg(text, kind) {
-  formMsg.textContent = text;
-  formMsg.className = `msg ${kind}`;
-  show(formMsg);
-}
-
-async function saveForm() {
-  const payload = {
-    companyName: $('f-company').value.trim(),
-    roleTitle: $('f-title').value.trim(),
-    location: $('f-location').value.trim() || null,
-    dateApplied: $('f-date').value || null,
-    status: $('f-status').value,
-    recruitingSeason: $('f-season').value || null,
-    jobDescription: $('f-desc').value.trim() || null,
-    notes: $('f-notes').value.trim() || null,
-    sourceHost: scrapedContext?.sourceHost ?? null,
-    jobUrl: scrapedContext?.jobUrl ?? null,
-  };
-
-  if (!payload.companyName || !payload.roleTitle) {
-    showFormMsg('Company and role are required.', 'error');
-    return;
-  }
-
-  try {
-    const res = await send(MSG.SAVE_APPLICATION, { app: payload });
-    if (res?.duplicate) {
-      showFormMsg(`Duplicate: ${res.duplicate.roleTitle} at ${res.duplicate.companyName}`, 'warn');
-      return;
-    }
-    if (res?.error) {
-      showFormMsg(res.error, 'error');
-      return;
-    }
-    if (res?.analyzed) {
-      showFormMsg('Saved. Job analysis started in JobMaxxing.', 'ok');
-    } else {
-      showFormMsg('Saved to JobMaxxing.', 'ok');
-    }
-    await loadRecent();
-    setTimeout(closeForm, 900);
-  } catch (error) {
-    showFormMsg(error.message ?? 'Save failed', 'error');
-  }
-}
-
-$('sign-in').addEventListener('click', async () => {
-  hide(loginError);
-  try {
-    const res = await send(MSG.SIGN_IN, {
-      email: $('email').value.trim(),
-      password: $('password').value,
-    });
-    if (res?.error) throw new Error(res.error);
-    await refreshSession();
-  } catch (error) {
-    loginError.textContent = error.message ?? 'Sign in failed';
-    show(loginError);
-  }
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && formView.style.display !== 'none') closeForm();
+  if (e.key === 'Escape' && mergeView.style.display !== 'none') closeMergeView();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && formView.style.display !== 'none') saveForm();
 });
 
-$('sign-out').addEventListener('click', async () => {
-  await send(MSG.SIGN_OUT);
-  await refreshSession();
-});
+document.getElementById('btn-add').addEventListener('click', () => openAddForm());
+document.getElementById('btn-open-web').addEventListener('click', () => openJobMaxxing('/applications'));
 
-$('open-app').addEventListener('click', () => {
-  chrome.tabs.create({ url: `${APP_URL}/applications` });
-});
-
-$('grab-page').addEventListener('click', async () => {
+document.getElementById('btn-grab').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
   try {
     const res = await send(MSG.SCRAPE_TAB, { tabId: tab.id });
-    if (!res?.scraped) {
-      showFormMsg('Could not scrape this page.', 'error');
-      openForm({});
-      return;
-    }
-    openForm(res.scraped);
-  } catch (error) {
-    openForm({});
-    showFormMsg(error.message ?? 'Scrape failed', 'error');
+    const scraped = res?.scraped || {};
+    openAddForm({
+      title: scraped.title,
+      company: scraped.company,
+      location: scraped.location,
+      description: scraped.description,
+      sourceHost: scraped.sourceHost,
+      jobUrl: scraped.jobUrl,
+    });
+  } catch {
+    openAddForm({ title: '', company: '', description: '' });
   }
 });
 
-$('add-manual').addEventListener('click', () => openForm({}));
-$('cancel-form').addEventListener('click', closeForm);
-$('save-form').addEventListener('click', saveForm);
-$('refresh-recent').addEventListener('click', loadRecent);
+function openAddForm(prefill = {}) {
+  editingId = null;
+  scrapedJobUrl = prefill.jobUrl || null;
+  formTitle.textContent = 'Add Application';
+  fId.value = '';
+  fTitle.value = prefill.title || '';
+  fCompany.value = prefill.company || '';
+  fLocation.value = prefill.location || '';
+  fDate.value = new Date().toISOString().slice(0, 10);
+  fStatus.value = 'applied';
+  fSeason.value = prefill.season || '';
+  fDesc.value = prefill.description || '';
+  fNotes.value = prefill.notes || '';
+  fDupe.style.display = 'none';
+  btnDelete.style.display = 'none';
+  home.style.display = 'none';
+  formView.style.display = 'flex';
+}
 
-refreshSession();
+function closeForm() {
+  formView.style.display = 'none';
+  home.style.display = 'flex';
+  editingId = null;
+  scrapedJobUrl = null;
+}
+
+async function saveForm() {
+  const title = fTitle.value.trim();
+  const company = fCompany.value.trim();
+  if (!title || !company) {
+    fTitle.reportValidity?.();
+    fTitle.focus();
+    return;
+  }
+
+  const app = {
+    id: fId.value || crypto.randomUUID(),
+    title,
+    company,
+    location: fLocation.value.trim(),
+    appliedAt: fDate.value || new Date().toISOString().slice(0, 10),
+    status: fStatus.value,
+    season: fSeason.value || null,
+    description: fDesc.value.trim(),
+    notes: fNotes.value.trim(),
+    jobUrl: scrapedJobUrl,
+  };
+
+  const msgType = editingId ? MSG.UPDATE_APPLICATION : MSG.SAVE_APPLICATION;
+  let res;
+  try {
+    res = await send(msgType, { app });
+  } catch (err) {
+    showFormError(`Save failed: ${err.message}`);
+    return;
+  }
+
+  if (!res || res.error || res.ok === false) {
+    showFormError(`Save failed: ${res?.error || 'unknown error'}`);
+    return;
+  }
+
+  if (res.dupe) {
+    fDupe.textContent = '⚠ This looks like a duplicate of an existing application.';
+    fDupe.style.display = 'block';
+    return;
+  }
+
+  closeForm();
+  await loadCount();
+}
+
+document.getElementById('btn-back').addEventListener('click', closeForm);
+document.getElementById('btn-save').addEventListener('click', saveForm);
+document.getElementById('btn-delete').addEventListener('click', async () => {
+  if (!editingId) return;
+  if (!confirm('Delete this application?')) return;
+  await send(MSG.DELETE_APPLICATION, { id: editingId });
+  closeForm();
+  await loadCount();
+});
+
+function showFormError(msg) {
+  fDupe.textContent = msg;
+  fDupe.style.display = 'block';
+  console.error('[jobmaxxing]', msg);
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const mergeInput = document.getElementById('merge-input');
+const mergeDrop = document.getElementById('merge-drop');
+const mergeListEl = document.getElementById('merge-list');
+const mergeName = document.getElementById('merge-name');
+const mergeStatus = document.getElementById('merge-status');
+const btnMergeGo = document.getElementById('btn-merge-go');
+const btnMergeClear = document.getElementById('btn-merge-clear');
+let mergeFiles = [];
+
+function openMergeView() {
+  mergeFiles = [];
+  renderMergeList();
+  setMergeStatus('');
+  mergeName.value = 'combined.pdf';
+  home.style.display = 'none';
+  mergeView.style.display = 'flex';
+}
+function closeMergeView() {
+  mergeView.style.display = 'none';
+  home.style.display = 'flex';
+}
+
+function humanSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+function addMergeFiles(fileList) {
+  const pdfs = [...fileList].filter((f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  const skipped = fileList.length - pdfs.length;
+  mergeFiles.push(...pdfs);
+  renderMergeList();
+  if (skipped > 0) setMergeStatus(`Skipped ${skipped} non-PDF file${skipped > 1 ? 's' : ''}.`, 'info');
+  else setMergeStatus('');
+}
+
+function renderMergeList() {
+  mergeListEl.innerHTML = '';
+  mergeFiles.forEach((file, i) => {
+    const li = document.createElement('li');
+    li.className = 'merge-item';
+    li.innerHTML = `
+      <span class="merge-item-idx">${i + 1}</span>
+      <span class="merge-item-name" title="${esc(file.name)}">${esc(file.name)}</span>
+      <span class="merge-item-size">${humanSize(file.size)}</span>
+      <span class="merge-item-btns">
+        <button class="up" title="Move up" ${i === 0 ? 'disabled' : ''}><svg viewBox="0 0 20 20"><path d="M10 5l5 6H5l5-6z"/></svg></button>
+        <button class="down" title="Move down" ${i === mergeFiles.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 20 20"><path d="M10 15l-5-6h10l-5 6z"/></svg></button>
+        <button class="rm" title="Remove"><svg viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
+      </span>`;
+    li.querySelector('.up').addEventListener('click', () => moveMerge(i, -1));
+    li.querySelector('.down').addEventListener('click', () => moveMerge(i, 1));
+    li.querySelector('.rm').addEventListener('click', () => { mergeFiles.splice(i, 1); renderMergeList(); });
+    mergeListEl.appendChild(li);
+  });
+  btnMergeGo.disabled = mergeFiles.length < 1;
+  btnMergeClear.style.display = mergeFiles.length ? 'inline-flex' : 'none';
+}
+
+function moveMerge(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= mergeFiles.length) return;
+  [mergeFiles[i], mergeFiles[j]] = [mergeFiles[j], mergeFiles[i]];
+  renderMergeList();
+}
+
+function setMergeStatus(msg, kind = 'info') {
+  if (!msg) { mergeStatus.style.display = 'none'; return; }
+  mergeStatus.textContent = msg;
+  mergeStatus.className = `merge-status ${kind}`;
+  mergeStatus.style.display = 'block';
+}
+
+async function combineAndDownload() {
+  if (mergeFiles.length < 1 || typeof PDFLib === 'undefined') {
+    setMergeStatus('PDF library not loaded.', 'error');
+    return;
+  }
+  btnMergeGo.disabled = true;
+  setMergeStatus('Combining…', 'info');
+  try {
+    const out = await PDFLib.PDFDocument.create();
+    for (const file of mergeFiles) {
+      const bytes = await file.arrayBuffer();
+      const src = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+      const pages = await out.copyPages(src, src.getPageIndices());
+      pages.forEach((p) => out.addPage(p));
+    }
+    const merged = await out.save();
+    let name = (mergeName.value || 'combined.pdf').trim();
+    if (!/\.pdf$/i.test(name)) name += '.pdf';
+    const blob = new Blob([merged], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    setMergeStatus(`Combined ${mergeFiles.length} file${mergeFiles.length > 1 ? 's' : ''} → ${name}`, 'ok');
+  } catch (err) {
+    setMergeStatus(`Couldn't combine: ${err.message}`, 'error');
+  } finally {
+    btnMergeGo.disabled = mergeFiles.length < 1;
+  }
+}
+
+document.getElementById('btn-merge').addEventListener('click', openMergeView);
+document.getElementById('btn-merge-back').addEventListener('click', closeMergeView);
+btnMergeGo.addEventListener('click', combineAndDownload);
+btnMergeClear.addEventListener('click', () => { mergeFiles = []; renderMergeList(); setMergeStatus(''); });
+mergeInput.addEventListener('change', () => { addMergeFiles(mergeInput.files); mergeInput.value = ''; });
+['dragenter', 'dragover'].forEach((ev) => mergeDrop.addEventListener(ev, (e) => { e.preventDefault(); mergeDrop.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach((ev) => mergeDrop.addEventListener(ev, (e) => { e.preventDefault(); mergeDrop.classList.remove('dragover'); }));
+mergeDrop.addEventListener('drop', (e) => { if (e.dataTransfer?.files?.length) addMergeFiles(e.dataTransfer.files); });
+
+bindAuthForm({ onSignedIn: loadCount });
