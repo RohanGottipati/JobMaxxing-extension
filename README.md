@@ -6,8 +6,7 @@ Chrome extension forked from [JobTrack](https://github.com/zhao0524/JobTrack), r
 
 - Job-page detection on LinkedIn, Workday, Greenhouse, Lever, and Ashby
 - Popup: Grab This Page, Add Manually, Combine PDFs, application count
-- **Dashboard** (`options/options.html`): term rail, searchable list, reading pane, status/season edits
-- Settings drawer: export/import JSON & CSV, follow-up reminders, refresh, wipe
+- Direct synchronization with the JobMaxxing web app
 - Duplicate detection and optional server-side job analysis (when AI consent is enabled)
 
 ## Setup
@@ -24,12 +23,12 @@ export const APP_URL = 'https://jobmaxxing.app'; // or http://localhost:3000
 
 3. Load unpacked in Chrome → select this folder.
 
-4. Sign in with your JobMaxxing email/password in the popup or dashboard.
+4. Sign in with your JobMaxxing email/password in the popup.
 
 ## Usage
 
-- **Popup** — quick capture, PDF merge, link to dashboard
-- **Dashboard** — browse/filter applications; click **Open in JobMaxxing** for full AI workflows
+- **Popup** — quick capture, manual role entry, PDF merge, and a direct link to the web app
+- **JobMaxxing web app** — browse, edit, and manage applications and use the full AI workflows
 - **Popup capture** — use “Grab This Page” to capture supported job boards without overlaying the page
 
 ## Related repo

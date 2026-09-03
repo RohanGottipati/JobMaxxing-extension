@@ -28,6 +28,8 @@ export function fromTrackApp(app) {
     jobUrl: app.jobUrl ?? null,
     location: app.location?.trim() || null,
     dateApplied: app.appliedAt || null,
+    deadline: app.deadline || null,
+    nextAction: app.nextAction?.trim() || null,
     status,
     jobDescription: app.description?.trim() || null,
     notes,
@@ -45,6 +47,8 @@ export function toTrackApp(apiApp) {
     company: apiApp.companyName || '',
     location: apiApp.location || '',
     appliedAt: apiApp.dateApplied || null,
+    deadline: apiApp.deadline || null,
+    nextAction: apiApp.nextAction || '',
     status: fromApiStatus(apiApp.status, apiApp.notes),
     description: apiApp.jobDescription || '',
     notes,
@@ -67,5 +71,7 @@ export function toTrackSummary(apiApp) {
     season: apiApp.recruitingSeason || null,
     descriptionHash: apiApp.descriptionHash || null,
     sourceHost: apiApp.sourceHost || '',
+    jobUrl: apiApp.jobUrl || null,
+    updatedAt: apiApp.updatedAt || null,
   };
 }

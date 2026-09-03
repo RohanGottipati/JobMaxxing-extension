@@ -3,67 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>JobMaxxing</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div id="login-view" class="login-view" style="display:none">
-    <h1 class="logo">JobMaxxing</h1>
+  <form id="login-view" class="login-view" style="display:none">
+    <div class="brand-lockup">
+      <img class="brand-icon" src="../icons/icon128.png" alt="">
+      <h1 class="logo">Job<span>Maxxing</span></h1>
+    </div>
     <p class="login-lead">Sign in with your JobMaxxing account to capture and track jobs.</p>
-    <label class="field"><span>Email</span><input id="login-email" type="email" autocomplete="username"></label>
-    <label class="field"><span>Password</span><input id="login-password" type="password" autocomplete="current-password"></label>
+    <label class="field"><span>Email</span><input id="login-email" type="email" autocomplete="username" required></label>
+    <label class="field"><span>Password</span><input id="login-password" type="password" autocomplete="current-password" required></label>
     <p id="login-error" class="login-error" style="display:none"></p>
-    <button id="btn-sign-in" class="btn-primary" type="button">Sign in</button>
-  </div>
+    <button id="btn-sign-in" class="btn-primary" type="submit">Sign in</button>
+  </form>
 
   <div id="app-view" style="display:none">
     <div id="app">
       <header class="toolbar">
         <div class="toolbar-left">
-          <h1 class="logo">JobMaxxing</h1>
+          <img class="brand-icon" src="../icons/icon128.png" alt="">
+          <h1 class="logo">Job<span>Maxxing</span></h1>
           <span id="app-count" class="count-chip"></span>
         </div>
-        <div class="toolbar-right">
-          <span id="session-label" class="session-label"></span>
-          <a href="../options/options.html" target="_blank" class="btn-text" title="Open the dashboard">
-            <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.94 4.06a6.02 6.02 0 00-3.2 2.44h1.98c.24-.9.58-1.7.98-2.35a6.1 6.1 0 00.24-.09zM7.3 8.5c.05-.72.16-1.4.32-2H4.6a5.96 5.96 0 00-.55 2H7.3zm0 1H4.05c.08.71.27 1.38.55 2H7.6a13.6 13.6 0 01-.3-2zm1 0c.05.72.16 1.4.31 2h2.78c.15-.6.26-1.28.31-2H8.3zm3.4-1c-.05-.72-.16-1.4-.32-2H8.62c-.16.6-.27 1.28-.32 2h3.4zm1 1c-.05.72-.15 1.4-.3 2h2.99c.28-.62.47-1.29.55-2h-3.24zm2.56-3a6.02 6.02 0 00-3.2-2.44c.09.03.16.06.24.09.4.65.74 1.45.98 2.35h1.98zM10 4.24c-.44.5-.86 1.3-1.14 2.26h2.28C10.86 5.54 10.44 4.74 10 4.24zm0 11.52c.44-.5.86-1.3 1.14-2.26H8.86c.28.96.7 1.76 1.14 2.26zm-1.06.18a6.02 6.02 0 01-3.2-2.44h1.98c.24.9.58 1.7.98 2.35a6.1 6.1 0 01-.24.09h.48zm2.12 0h.48a6.1 6.1 0 01-.24-.09c.4-.65.74-1.45.98-2.35h1.98a6.02 6.02 0 01-3.2 2.44z" clip-rule="evenodd"/></svg>
-            Dashboard
-          </a>
-        </div>
+        <span id="session-label" class="session-label"></span>
       </header>
 
       <main id="home">
-        <button id="btn-grab" class="action-primary" title="Capture the job posting on the current tab">
-          <span class="action-primary-icon">
-            <svg viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v6a2 2 0 002 2h4v2H6a1 1 0 100 2h8a1 1 0 100-2h-2v-2h4a2 2 0 002-2V5a2 2 0 00-2-2H4zm6 2.5a.75.75 0 01.75.75v3.19l1.22-1.22a.75.75 0 111.06 1.06l-2.5 2.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 111.06-1.06l1.22 1.22V6.25A.75.75 0 0110 5.5z"/></svg>
+        <button id="btn-grab" class="action-primary" type="button" title="Capture the job posting on the current tab">
+          <span class="action-primary-icon" id="grab-icon">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3.5A1.5 1.5 0 015.5 2h5.086a1.5 1.5 0 011.06.44l3.914 3.914A1.5 1.5 0 0116 7.414V16.5A1.5 1.5 0 0114.5 18h-9A1.5 1.5 0 014 16.5v-13zM10.5 3H5.5a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V8h-3.5A1.5 1.5 0 0110.5 6.5V3zm1 0v3.5a.5.5 0 00.5.5H15.5L11.5 3zM7 11.25a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 017 11.25zm.75 2.5a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5z"/></svg>
           </span>
           <span class="action-primary-text">
-            <span class="action-primary-title">Grab This Page</span>
-            <span class="action-primary-sub">Capture the job on the current tab</span>
+            <span class="action-primary-title" id="grab-title">Grab this page</span>
+            <span class="action-primary-sub" id="grab-sub">Capture the posting on this tab</span>
+          </span>
+          <span class="action-primary-chevron" aria-hidden="true">
+            <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L11.586 10 7.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
           </span>
         </button>
 
+        <section id="page-match" class="notice-card" hidden>
+          <p class="micro" id="page-match-kicker">Already tracking</p>
+          <p class="notice-title" id="page-match-title"></p>
+          <p class="notice-meta" id="page-match-meta"></p>
+          <div class="notice-actions">
+            <button id="btn-open-match" class="btn-text" type="button">Open</button>
+            <button id="btn-apply-match" class="btn-primary btn-sm" type="button">Mark applied</button>
+          </div>
+        </section>
+
         <div class="action-grid">
-          <button id="btn-add" class="action-card" title="Add an application manually">
-            <svg viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z"/></svg>
-            <span>Add Manually</span>
+          <button id="btn-add" class="action-card" type="button" title="Add an application manually">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z"/></svg>
+            <span>Add manually</span>
           </button>
-          <button id="btn-merge" class="action-card" title="Combine PDF files into one">
-            <svg viewBox="0 0 20 20"><path d="M6 2a2 2 0 00-2 2v9a2 2 0 002 2h1v-2H6V4h5v3a1 1 0 001 1h3v1h2V6.414A1 1 0 0016.707 5.7L13.3 2.293A1 1 0 0012.586 2H6zm7 12v-2a1 1 0 10-2 0v2H9a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2z"/></svg>
+          <button id="btn-merge" class="action-card" type="button" title="Combine PDF files into one">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 2a2 2 0 00-2 2v9a2 2 0 002 2h1v-2H6V4h5v3a1 1 0 001 1h3v1h2V6.414A1 1 0 0016.707 5.7L13.3 2.293A1 1 0 0012.586 2H6zm7 12v-2a1 1 0 10-2 0v2H9a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2z"/></svg>
             <span>Combine PDFs</span>
           </button>
         </div>
 
-        <button id="btn-open-web" class="btn-text btn-open-web" type="button">Open JobMaxxing web app</button>
-        <button id="btn-sign-out" class="btn-link" type="button">Sign out</button>
+        <section id="recent" class="recent" hidden>
+          <p class="micro">Recent</p>
+          <ul id="recent-list" class="recent-list"></ul>
+        </section>
+
+        <div class="home-footer">
+          <button id="btn-open-web" class="btn-text btn-open-web" type="button">Open JobMaxxing</button>
+          <button id="btn-sign-out" class="btn-link" type="button">Sign out</button>
+        </div>
       </main>
 
       <div id="form-view" style="display:none" class="form-view">
         <div class="form-header">
-          <button id="btn-back" class="btn-icon" type="button">
+          <button id="btn-back" class="btn-icon" type="button" aria-label="Back">
             <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
           </button>
-          <div class="form-heading"><h2 id="form-title">New Role</h2><span class="draft-label">Draft</span></div>
+          <div class="form-heading"><h2 id="form-title">New role</h2><span class="draft-label" id="form-state-label">Draft</span></div>
         </div>
         <div class="form-body">
           <input type="hidden" id="f-id">
@@ -71,7 +90,7 @@
           <div class="compose-line subject"><label for="f-title">Subject</label><input id="f-title" type="text" placeholder="Role title" required></div>
           <div class="field"><label for="f-location">Location</label><input id="f-location" type="text" placeholder="Remote / NYC"></div>
           <div class="field row">
-            <div><label for="f-date">Applied Date</label><input id="f-date" type="date"></div>
+            <div><label for="f-date">Applied date</label><input id="f-date" type="date"></div>
             <div><label for="f-status">Status</label>
               <select id="f-status">
                 <option value="saved">Saved</option>
@@ -85,10 +104,14 @@
             </div>
           </div>
           <div class="field"><label for="f-season">Term</label><select id="f-season"><option value="">— select term —</option></select></div>
+          <div class="field row">
+            <div><label for="f-deadline">Deadline</label><input id="f-deadline" type="date"></div>
+            <div><label for="f-next">Next action</label><input id="f-next" type="text" placeholder="Follow up, OA, prep"></div>
+          </div>
           <div class="field"><label for="f-url">Job URL</label><input id="f-url" type="url" placeholder="https://company.com/careers/role"></div>
-          <div class="field"><label for="f-desc">Job Description</label><textarea id="f-desc" rows="6" placeholder="Paste the job description…"></textarea></div>
+          <div class="field"><label for="f-desc">Job description</label><textarea id="f-desc" rows="6" placeholder="Paste the job description…"></textarea></div>
           <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" rows="3" placeholder="Recruiter name, referral, etc."></textarea></div>
-          <div id="f-dupe" class="dupe-warning" style="display:none">⚠ This looks like a duplicate of an existing application.</div>
+          <div id="f-dupe" class="dupe-warning" style="display:none">This looks like a duplicate of an existing application.</div>
         </div>
         <div class="form-footer">
           <button id="btn-delete" class="btn-danger" style="display:none" type="button">Delete</button>
@@ -98,14 +121,14 @@
 
       <div id="merge-view" style="display:none" class="form-view">
         <div class="form-header">
-          <button id="btn-merge-back" class="btn-icon" type="button">
+          <button id="btn-merge-back" class="btn-icon" type="button" aria-label="Back">
             <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
           </button>
           <h2>Combine PDFs</h2>
         </div>
         <div class="form-body">
           <label id="merge-drop" class="merge-drop" for="merge-input">
-            <svg viewBox="0 0 20 20"><path d="M10 3a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V4a1 1 0 011-1z" opacity="0"/><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm6 2.5a.75.75 0 01.75.75v3.19l1.22-1.22a.75.75 0 111.06 1.06l-2.5 2.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 111.06-1.06l1.22 1.22V6.25A.75.75 0 0110 5.5z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm6 2.5a.75.75 0 01.75.75v3.19l1.22-1.22a.75.75 0 111.06 1.06l-2.5 2.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 111.06-1.06l1.22 1.22V6.25A.75.75 0 0110 5.5z"/></svg>
             <span class="merge-drop-title">Click to choose PDFs</span>
             <span class="merge-drop-hint">or drop them here — add as many as you like</span>
             <input id="merge-input" type="file" accept="application/pdf" multiple hidden>
@@ -116,7 +139,7 @@
         </div>
         <div class="form-footer">
           <button id="btn-merge-clear" class="btn-danger" style="display:none" type="button">Clear</button>
-          <button id="btn-merge-go" class="btn-primary" type="button" disabled>Combine &amp; Download</button>
+          <button id="btn-merge-go" class="btn-primary" type="button" disabled>Combine &amp; download</button>
         </div>
       </div>
     </div>

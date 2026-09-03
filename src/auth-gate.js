@@ -1,3 +1,4 @@
+import { getInstantSession } from './auth/session.js';
 import { MSG, send } from './messages.js';
 
 export async function getSession() {
@@ -12,7 +13,7 @@ export async function signOut() {
   return send(MSG.SIGN_OUT);
 }
 
-export function bindAuthForm({ onSignedIn }) {
+export function bindAuthForm({ onHydrate, onSignedIn }) {
   const loginView = document.getElementById('login-view');
   const appView = document.getElementById('app-view');
   const loginError = document.getElementById('login-error');
@@ -20,31 +21,48 @@ export function bindAuthForm({ onSignedIn }) {
   const signOutBtn = document.getElementById('btn-sign-out');
   const sessionLabel = document.getElementById('session-label');
 
-  function showLogin(message = '') {
+  function showLogin() {
     if (loginView) loginView.style.display = '';
     if (appView) appView.style.display = 'none';
-    if (sessionLabel) sessionLabel.textContent = message || 'Sign in required';
+    if (sessionLabel) {
+      sessionLabel.textContent = '';
+      sessionLabel.removeAttribute('title');
+    }
   }
 
-  function showApp(email) {
+  function showApp(displayName, email) {
     if (loginView) loginView.style.display = 'none';
     if (appView) appView.style.display = '';
-    if (sessionLabel) sessionLabel.textContent = email ?? 'Signed in';
+    if (sessionLabel) {
+      sessionLabel.textContent = displayName || 'Signed in';
+      if (email) sessionLabel.title = email;
+      else sessionLabel.removeAttribute('title');
+    }
   }
 
   async function refresh() {
+    let instant = { signedIn: false };
     try {
+      instant = await getInstantSession();
+      if (instant.signedIn) {
+        showApp(instant.displayName, instant.email);
+        await onHydrate?.();
+      } else {
+        showLogin();
+      }
+
       const session = await getSession();
       if (session?.error) throw new Error(session.error);
       if (session?.signedIn) {
-        showApp(session.email);
+        showApp(session.displayName, session.email);
         await onSignedIn?.();
         return true;
       }
       showLogin();
       return false;
     } catch (error) {
-      showLogin('Extension unavailable');
+      if (instant.signedIn) return true;
+      showLogin();
       if (loginError) {
         loginError.textContent =
           error instanceof Error ? error.message : 'Could not reach the extension background.';
@@ -54,11 +72,20 @@ export function bindAuthForm({ onSignedIn }) {
     }
   }
 
-  signInBtn?.addEventListener('click', async () => {
+  async function handleSignIn(event) {
+    event?.preventDefault();
     if (loginError) loginError.style.display = 'none';
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!email || !password) return;
+
+    const previousLabel = signInBtn?.textContent;
+    if (signInBtn) {
+      signInBtn.disabled = true;
+      signInBtn.textContent = 'Signing in…';
+    }
+
     try {
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
       const res = await signIn(email, password);
       if (res?.error) throw new Error(res.error);
       await refresh();
@@ -67,7 +94,17 @@ export function bindAuthForm({ onSignedIn }) {
         loginError.textContent = error instanceof Error ? error.message : 'Sign in failed';
         loginError.style.display = 'block';
       }
+    } finally {
+      if (signInBtn) {
+        signInBtn.disabled = false;
+        signInBtn.textContent = previousLabel || 'Sign in';
+      }
     }
+  }
+
+  loginView?.addEventListener('submit', handleSignIn);
+  signInBtn?.addEventListener('click', (event) => {
+    if (loginView?.tagName !== 'FORM') void handleSignIn(event);
   });
 
   signOutBtn?.addEventListener('click', async () => {

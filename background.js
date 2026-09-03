@@ -2,8 +2,9 @@ import { MSG } from './src/messages.js';
 import {
   analyzeApplication,
 } from './src/api/jobmaxxing.js';
-import { getCurrentUser, signIn, signOut } from './src/auth/session.js';
+import { getCurrentUser, getInstantSession, getSessionDisplay, signIn, signOut } from './src/auth/session.js';
 import {
+  clearIndexCache,
   deleteApplication,
   getAllApplications,
   getApplication,
@@ -21,12 +22,26 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  handleMessage(msg, sender).then(sendResponse).catch((err) => {
-    console.error('[jobmaxxing] message error:', err);
-    sendResponse({ error: err.message });
-  });
+  handleMessage(msg, sender)
+    .then((result) => respond(sendResponse, result))
+    .catch((err) => {
+      console.error('[jobmaxxing] message error:', err);
+      respond(sendResponse, { error: err instanceof Error ? err.message : String(err) });
+    });
   return true;
 });
+
+// sendResponse throws "Attempting to use a disconnected port object" when the
+// sender (usually the popup) closed while an async handler was still running.
+// That secondary throw escaped the .catch above and surfaced as an extension
+// error, so deliver best-effort instead.
+function respond(sendResponse, payload) {
+  try {
+    sendResponse(payload);
+  } catch {
+    // Port already disconnected; there is no one left to notify.
+  }
+}
 
 async function requireUser() {
   const user = await getCurrentUser();
@@ -52,23 +67,41 @@ async function handleMessage(msg, sender) {
   switch (msg.type) {
     case MSG.SIGN_IN: {
       const session = await signIn(msg.email, msg.password);
-      return { ok: true, email: session.user?.email };
+      const display = await getSessionDisplay();
+      return { ok: true, email: display?.email ?? session.user?.email, displayName: display?.displayName ?? null };
     }
 
     case MSG.SIGN_OUT: {
       await signOut();
+      await clearIndexCache();
       return { ok: true };
     }
 
     case MSG.GET_SESSION: {
-      const user = await getCurrentUser();
-      return { ok: true, signedIn: Boolean(user), email: user?.email ?? null };
+      const instant = await getInstantSession();
+      if (instant.signedIn && instant.cached) {
+        void getSessionDisplay();
+        return {
+          ok: true,
+          signedIn: true,
+          email: instant.email ?? null,
+          displayName: instant.displayName ?? null,
+        };
+      }
+
+      const session = await getSessionDisplay();
+      return {
+        ok: true,
+        signedIn: Boolean(session),
+        email: session?.email ?? null,
+        displayName: session?.displayName ?? null,
+      };
     }
 
     case MSG.SAVE_APPLICATION: {
       await requireUser();
       const app = { ...msg.app };
-      if (!app.id) app.id = crypto.randomUUID();
+      delete app.id;
       if (!app.appliedAt && app.status !== 'saved') {
         app.appliedAt = new Date().toISOString().slice(0, 10);
       }
@@ -99,6 +132,9 @@ async function handleMessage(msg, sender) {
       const existing = await getApplication(msg.app.id);
       if (!existing) return { ok: false, error: 'Not found' };
       const updated = { ...existing, ...msg.app };
+      if (updated.status && updated.status !== 'saved' && !updated.appliedAt) {
+        updated.appliedAt = new Date().toISOString().slice(0, 10);
+      }
       const saved = await updateApplication(updated);
       if (saved?.duplicate) return { ok: false, dupe: saved.duplicate };
       if (saved?.status === 'applied') {

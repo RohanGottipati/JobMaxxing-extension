@@ -8,9 +8,26 @@ import {
 } from './api/jobmaxxing.js';
 import { fromTrackApp, toTrackApp, toTrackSummary } from './mapping.js';
 
+const INDEX_KEY = 'jobmaxxing.index';
+
+export async function getCachedIndex() {
+  const result = await chrome.storage.local.get(INDEX_KEY);
+  return result[INDEX_KEY] ?? null;
+}
+
+async function storeIndex(index) {
+  await chrome.storage.local.set({ [INDEX_KEY]: index ?? [] });
+}
+
+export async function clearIndexCache() {
+  await chrome.storage.local.remove(INDEX_KEY);
+}
+
 export async function getIndex() {
   const { applications } = await getApplications({ limit: 500 });
-  return (applications ?? []).map(toTrackSummary);
+  const index = (applications ?? []).map(toTrackSummary);
+  await storeIndex(index);
+  return index;
 }
 
 export async function getApplication(id) {
@@ -47,4 +64,5 @@ export async function repairIndex() {
 
 export async function wipeAll() {
   await wipeAllApplications();
+  await clearIndexCache();
 }

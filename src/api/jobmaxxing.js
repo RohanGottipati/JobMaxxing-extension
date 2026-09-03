@@ -75,3 +75,7 @@ export function applicationUrl(id, view = "overview") {
 export function openJobMaxxing(path = '/applications') {
   return chrome.tabs.create({ url: `${APP_URL}${path}` });
 }
+
+export function openApplication(id) {
+  return openJobMaxxing(`/applications?id=${id}`);
+}

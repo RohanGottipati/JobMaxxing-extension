@@ -1,6 +1,7 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config.js';
 
 const SESSION_KEY = 'jobmaxxing.session';
+const DISPLAY_KEY = 'jobmaxxing.sessionDisplay';
 
 function authHeaders(token) {
   return {
@@ -17,6 +18,43 @@ async function storeSession(session) {
 export async function getStoredSession() {
   const result = await chrome.storage.local.get(SESSION_KEY);
   return result[SESSION_KEY] ?? null;
+}
+
+async function storeSessionDisplay(display) {
+  if (!display) {
+    await chrome.storage.local.remove(DISPLAY_KEY);
+    return;
+  }
+  await chrome.storage.local.set({ [DISPLAY_KEY]: display });
+}
+
+export async function getCachedSessionDisplay() {
+  const result = await chrome.storage.local.get(DISPLAY_KEY);
+  return result[DISPLAY_KEY] ?? null;
+}
+
+export async function getInstantSession() {
+  const session = await getStoredSession();
+  if (!session?.access_token) return { signedIn: false };
+
+  const cached = await getCachedSessionDisplay();
+  const user = session.user;
+  const email = cached?.email || user?.email || null;
+  const displayName =
+    cached?.displayName ||
+    formatShortName(
+      user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.user_metadata?.display_name,
+      email,
+    );
+
+  return {
+    signedIn: true,
+    email,
+    displayName,
+    cached: Boolean(cached?.displayName),
+  };
 }
 
 function isExpired(session) {
@@ -83,7 +121,7 @@ export async function signOut() {
       headers: authHeaders(session.access_token),
     }).catch(() => {});
   }
-  await chrome.storage.local.remove(SESSION_KEY);
+  await chrome.storage.local.remove([SESSION_KEY, DISPLAY_KEY]);
 }
 
 export async function getCurrentUser() {
@@ -98,4 +136,60 @@ export async function getCurrentUser() {
   }
   const user = await response.json();
   return user;
+}
+
+export function formatShortName(fullName, email) {
+  const parts = String(fullName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+  }
+  if (parts.length === 1) return parts[0];
+
+  const local = String(email || '').split('@')[0].trim();
+  return local || 'Signed in';
+}
+
+export async function getSessionDisplay({ refresh = true } = {}) {
+  if (!refresh) {
+    const instant = await getInstantSession();
+    return instant.signedIn ? instant : null;
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    await storeSessionDisplay(null);
+    return null;
+  }
+
+  let fullName =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.user_metadata?.display_name ||
+    '';
+
+  if (!fullName) {
+    try {
+      const token = await getAccessToken();
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?select=full_name&id=eq.${user.id}`,
+        { headers: { ...authHeaders(token), Accept: 'application/json' } },
+      );
+      if (response.ok) {
+        const rows = await response.json();
+        fullName = rows?.[0]?.full_name || '';
+      }
+    } catch {
+      // Fall back to email local-part.
+    }
+  }
+
+  const display = {
+    email: user.email ?? null,
+    displayName: formatShortName(fullName, user.email),
+  };
+  await storeSessionDisplay(display);
+  return display;
 }
