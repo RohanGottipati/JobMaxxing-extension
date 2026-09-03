@@ -59,6 +59,15 @@
     }
     .icon-btn:hover { background: rgba(255,255,255,0.16); }
     .icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .new-role-btn {
+      display: inline-flex; align-items: center; gap: 6px; height: 34px;
+      padding: 0 12px; border: 1px solid rgba(255,255,255,0.7); border-radius: 6px;
+      background: #fff; color: var(--green); font: inherit; font-size: 13px; font-weight: 700;
+      cursor: pointer;
+    }
+    .new-role-btn:hover { background: #f7f4ed; }
+    .new-role-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .new-role-btn svg { width: 15px; height: 15px; fill: currentColor; }
 
     /* ── Layout: rail + list + reading pane ──────────────────── */
     .layout { flex: 1; display: flex; min-height: 0; }
@@ -132,6 +141,7 @@
     .row-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .chip { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; letter-spacing: 0.3px; text-transform: uppercase; flex-shrink: 0; }
+    .chip-saved     { background: #f0ece3; color: #605e5c; }
     .chip-applied   { background: #dbeafe; color: #1e40af; }
     .chip-oa        { background: #fef3c7; color: #92400e; }
     .chip-interview { background: #e8efe9; color: #1f3830; }
@@ -153,6 +163,7 @@
 
     .reader { max-width: 860px; margin: 0; padding: 28px 36px; }
     .reader-head { display: flex; gap: 16px; align-items: flex-start; }
+    .reader-back { display: none; }
     .reader-head .avatar { width: 48px; height: 48px; font-size: 16px; }
     .reader-titles { flex: 1; min-width: 0; }
     .reader-title { font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1.25; }
@@ -171,6 +182,65 @@
     .reader-body h3 { font-size: 12px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
     .reader-desc { font-size: 14px; color: #2d2d2d; line-height: 1.7; white-space: pre-wrap; }
     .reader-nodesc { font-size: 13px; color: var(--faint); font-style: italic; }
+
+    /* ── Mail-style role composer ───────────────────────────── */
+    .composer { min-height: 100%; display: flex; flex-direction: column; background: var(--pane); }
+    .composer-toolbar {
+      position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px;
+      padding: 10px 18px; border-bottom: 1px solid var(--line); background: rgba(250,249,248,0.96);
+    }
+    .composer-toolbar h2 { font-size: 14px; font-weight: 700; }
+    .draft-badge { padding: 2px 7px; border: 1px solid var(--green-line); border-radius: 999px; color: var(--green); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .composer-toolbar .spacer { flex: 1; }
+    .composer-card { width: min(860px, calc(100% - 32px)); margin: 24px auto; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(27,27,27,.05); }
+    .compose-line { display: grid; grid-template-columns: 92px minmax(0,1fr); align-items: center; min-height: 50px; padding: 4px 16px; border-bottom: 1px solid var(--line); }
+    .compose-line > label, .compose-field > label { color: var(--faint); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .compose-line > input { width: 100%; height: 40px; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; }
+    .compose-line.subject > input { font-size: 16px; font-weight: 600; }
+    .compose-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; padding: 16px; border-bottom: 1px solid var(--line); background: #faf9f8; }
+    .compose-grid.two { grid-template-columns: minmax(0,1fr); background: #fff; }
+    .compose-field { display: grid; gap: 5px; }
+    .compose-field input, .compose-field select { width: 100%; height: 34px; padding: 6px 9px; border: 1px solid #d6d1c7; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; }
+    .compose-body { padding: 18px; border-bottom: 1px solid var(--line); }
+    .compose-body label { display: block; margin-bottom: 8px; color: var(--faint); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .compose-body textarea { width: 100%; min-height: 240px; resize: vertical; border: 0; outline: 0; background: repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(47,79,69,.065) 28px); color: #2d2d2d; font: inherit; font-size: 14px; line-height: 28px; }
+    .compose-body.notes textarea { min-height: 96px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: #faf9f8; line-height: 1.6; }
+    .compose-footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; }
+    .compose-message { margin-right: auto; font-size: 12px; color: var(--muted); }
+    .compose-message.error { color: #b4573f; }
+
+    @media (max-width: 980px) {
+      .rail { width: 180px; }
+      .list-pane { width: 340px; }
+      .compose-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .stats { display: none; }
+    }
+
+    @media (max-width: 700px) {
+      .topbar { height: auto; min-height: 52px; padding: 9px 12px; flex-wrap: wrap; gap: 8px 12px; }
+      .brand .tag { display: none; }
+      .topbar > .spacer { display: none; }
+      .controls { width: 100%; display: grid; grid-template-columns: minmax(0,1fr) auto auto auto; }
+      .search-wrap, .controls input[type="search"] { width: 100%; min-width: 0; }
+      .layout { position: relative; }
+      .rail { display: none; }
+      .list-pane { width: 100%; border-right: 0; }
+      .read-pane { display: none; position: absolute; inset: 0; z-index: 5; width: 100%; background: var(--pane); }
+      .read-pane:has(.reader), .read-pane:has(.composer) { display: block; }
+      .reader { padding: 18px 16px; }
+      .reader-head { align-items: center; gap: 10px; }
+      .reader-back { display: inline-flex; flex-shrink: 0; }
+      .reader-head .avatar { width: 40px; height: 40px; font-size: 14px; }
+      .reader-title { font-size: 18px; }
+      .composer-toolbar { padding: 8px 10px; gap: 7px; }
+      .composer-toolbar h2 { font-size: 13px; }
+      .composer-card { width: 100%; margin: 0; border-width: 0; border-radius: 0; box-shadow: none; }
+      .compose-grid { grid-template-columns: minmax(0,1fr); }
+      .compose-line { grid-template-columns: 64px minmax(0,1fr); padding-inline: 12px; }
+      .compose-body { padding: 16px 12px; }
+      .compose-footer { padding: 10px 12px; }
+      .compose-message { display: none; }
+    }
 
     /* ── Settings drawer ─────────────────────────────────────── */
     .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 30; }
@@ -230,6 +300,10 @@
         <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
         <input id="search" type="search" placeholder="Search title or company…" autocomplete="off">
       </div>
+      <button class="new-role-btn" id="btn-new-role" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z"/></svg>
+        New role
+      </button>
       <button class="icon-btn" id="btn-open-web" title="Open JobMaxxing web app">
         <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.94 4.06a6.02 6.02 0 00-3.2 2.44h1.98c.24-.9.58-1.7.98-2.35a6.1 6.1 0 00.24-.09zM7.3 8.5c.05-.72.16-1.4.32-2H4.6a5.96 5.96 0 00-.55 2H7.3zm0 1H4.05c.08.71.27 1.38.55 2H7.6a13.6 13.6 0 01-.3-2zm1 0c.05.72.16 1.4.31 2h2.78c.15-.6.26-1.28.31-2H8.3zm3.4-1c-.05-.72-.16-1.4-.32-2H8.62c-.16.6-.27 1.28-.32 2h3.4zm1 1c-.05.72-.15 1.4-.3 2h2.99c.28-.62.47-1.29.55-2h-3.24zm2.56-3a6.02 6.02 0 00-3.2-2.44c.09.03.16.06.24.09.4.65.74 1.45.98 2.35h1.98zM10 4.24c-.44.5-.86 1.3-1.14 2.26h2.28C10.86 5.54 10.44 4.74 10 4.24zm0 11.52c.44-.5.86-1.3 1.14-2.26H8.86c.28.96.7 1.76 1.14 2.26zm-1.06.18a6.02 6.02 0 01-3.2-2.44h1.98c.24.9.58 1.7.98 2.35a6.1 6.1 0 01-.24.09h.48zm2.12 0h.48a6.1 6.1 0 01-.24-.09c.4-.65.74-1.45.98-2.35h1.98a6.02 6.02 0 01-3.2 2.44z" clip-rule="evenodd"/></svg>
       </button>

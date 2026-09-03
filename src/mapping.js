@@ -4,7 +4,7 @@ export function fromApiStatus(status, notes = '') {
   if (status === 'online_assessment') return 'oa';
   if (status === 'withdrawn' && String(notes).startsWith('[ghosted]')) return 'ghosted';
   if (status === 'final_round') return 'interview';
-  if (status === 'saved') return 'applied';
+  if (status === 'saved') return 'saved';
   const map = {
     applied: 'applied',
     interview: 'interview',

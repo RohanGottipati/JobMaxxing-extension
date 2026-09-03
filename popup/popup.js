@@ -17,10 +17,12 @@ const fLocation = document.getElementById('f-location');
 const fDate = document.getElementById('f-date');
 const fStatus = document.getElementById('f-status');
 const fSeason = document.getElementById('f-season');
+const fUrl = document.getElementById('f-url');
 const fDesc = document.getElementById('f-desc');
 const fNotes = document.getElementById('f-notes');
 const fDupe = document.getElementById('f-dupe');
 const btnDelete = document.getElementById('btn-delete');
+const btnSave = document.getElementById('btn-save');
 const mergeView = document.getElementById('merge-view');
 
 SEASONS.forEach((s) => fSeason.appendChild(new Option(s, s)));
@@ -65,18 +67,21 @@ document.getElementById('btn-grab').addEventListener('click', async () => {
 function openAddForm(prefill = {}) {
   editingId = null;
   scrapedJobUrl = prefill.jobUrl || null;
-  formTitle.textContent = 'Add Application';
+  formTitle.textContent = 'New Role';
   fId.value = '';
   fTitle.value = prefill.title || '';
   fCompany.value = prefill.company || '';
   fLocation.value = prefill.location || '';
-  fDate.value = new Date().toISOString().slice(0, 10);
-  fStatus.value = 'applied';
+  fDate.value = prefill.appliedAt || '';
+  fStatus.value = prefill.status || 'saved';
   fSeason.value = prefill.season || '';
+  fUrl.value = prefill.jobUrl || '';
   fDesc.value = prefill.description || '';
   fNotes.value = prefill.notes || '';
   fDupe.style.display = 'none';
   btnDelete.style.display = 'none';
+  btnSave.disabled = false;
+  btnSave.textContent = 'Save role';
   home.style.display = 'none';
   formView.style.display = 'flex';
 }
@@ -92,22 +97,26 @@ async function saveForm() {
   const title = fTitle.value.trim();
   const company = fCompany.value.trim();
   if (!title || !company) {
-    fTitle.reportValidity?.();
-    fTitle.focus();
+    const missing = title ? fCompany : fTitle;
+    missing.reportValidity?.();
+    missing.focus();
     return;
   }
+
+  btnSave.disabled = true;
+  btnSave.textContent = 'Saving…';
 
   const app = {
     id: fId.value || crypto.randomUUID(),
     title,
     company,
     location: fLocation.value.trim(),
-    appliedAt: fDate.value || new Date().toISOString().slice(0, 10),
+    appliedAt: fDate.value || null,
     status: fStatus.value,
     season: fSeason.value || null,
     description: fDesc.value.trim(),
     notes: fNotes.value.trim(),
-    jobUrl: scrapedJobUrl,
+    jobUrl: fUrl.value.trim() || scrapedJobUrl,
   };
 
   const msgType = editingId ? MSG.UPDATE_APPLICATION : MSG.SAVE_APPLICATION;
@@ -116,17 +125,23 @@ async function saveForm() {
     res = await send(msgType, { app });
   } catch (err) {
     showFormError(`Save failed: ${err.message}`);
+    btnSave.disabled = false;
+    btnSave.textContent = 'Save role';
     return;
   }
 
   if (!res || res.error || res.ok === false) {
     showFormError(`Save failed: ${res?.error || 'unknown error'}`);
+    btnSave.disabled = false;
+    btnSave.textContent = 'Save role';
     return;
   }
 
   if (res.dupe) {
     fDupe.textContent = '⚠ This looks like a duplicate of an existing application.';
     fDupe.style.display = 'block';
+    btnSave.disabled = false;
+    btnSave.textContent = 'Save role';
     return;
   }
 
@@ -135,7 +150,7 @@ async function saveForm() {
 }
 
 document.getElementById('btn-back').addEventListener('click', closeForm);
-document.getElementById('btn-save').addEventListener('click', saveForm);
+btnSave.addEventListener('click', saveForm);
 document.getElementById('btn-delete').addEventListener('click', async () => {
   if (!editingId) return;
   if (!confirm('Delete this application?')) return;

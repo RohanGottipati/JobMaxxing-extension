@@ -1,4 +1,4 @@
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config.local.js';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config.js';
 
 const SESSION_KEY = 'jobmaxxing.session';
 

@@ -63,17 +63,18 @@
           <button id="btn-back" class="btn-icon" type="button">
             <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
           </button>
-          <h2 id="form-title">Add Application</h2>
+          <div class="form-heading"><h2 id="form-title">New Role</h2><span class="draft-label">Draft</span></div>
         </div>
         <div class="form-body">
           <input type="hidden" id="f-id">
-          <div class="field"><label for="f-title">Job Title *</label><input id="f-title" type="text" placeholder="Software Engineer" required></div>
-          <div class="field"><label for="f-company">Company *</label><input id="f-company" type="text" placeholder="Acme Corp" required></div>
+          <div class="compose-line"><label for="f-company">To</label><input id="f-company" type="text" placeholder="Company name" autocomplete="organization" required></div>
+          <div class="compose-line subject"><label for="f-title">Subject</label><input id="f-title" type="text" placeholder="Role title" required></div>
           <div class="field"><label for="f-location">Location</label><input id="f-location" type="text" placeholder="Remote / NYC"></div>
           <div class="field row">
             <div><label for="f-date">Applied Date</label><input id="f-date" type="date"></div>
             <div><label for="f-status">Status</label>
               <select id="f-status">
+                <option value="saved">Saved</option>
                 <option value="applied">Applied</option>
                 <option value="oa">OA</option>
                 <option value="interview">Interview</option>
@@ -84,13 +85,14 @@
             </div>
           </div>
           <div class="field"><label for="f-season">Term</label><select id="f-season"><option value="">— select term —</option></select></div>
+          <div class="field"><label for="f-url">Job URL</label><input id="f-url" type="url" placeholder="https://company.com/careers/role"></div>
           <div class="field"><label for="f-desc">Job Description</label><textarea id="f-desc" rows="6" placeholder="Paste the job description…"></textarea></div>
           <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" rows="3" placeholder="Recruiter name, referral, etc."></textarea></div>
           <div id="f-dupe" class="dupe-warning" style="display:none">⚠ This looks like a duplicate of an existing application.</div>
         </div>
         <div class="form-footer">
           <button id="btn-delete" class="btn-danger" style="display:none" type="button">Delete</button>
-          <button id="btn-save" class="btn-primary" type="button">Save</button>
+          <button id="btn-save" class="btn-primary" type="button">Save role</button>
         </div>
       </div>
 

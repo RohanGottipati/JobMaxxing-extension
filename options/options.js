@@ -3,12 +3,12 @@ import { openJobMaxxing } from '../src/api/jobmaxxing.js';
 import { MSG, send } from '../src/messages.js';
 import { toCSV } from '../src/util/csv.js';
 
-const STATUS_ORDER = ['applied', 'oa', 'interview', 'offer', 'rejected', 'ghosted'];
+const STATUS_ORDER = ['saved', 'applied', 'oa', 'interview', 'offer', 'rejected', 'ghosted'];
 const STATUS_LABEL = {
-  applied: 'Applied', oa: 'OA', interview: 'Interview',
+  saved: 'Saved', applied: 'Applied', oa: 'OA', interview: 'Interview',
   offer: 'Offer', rejected: 'Rejected', ghosted: 'Ghosted',
 };
-const ACTIVE_STATUSES = ['applied', 'oa', 'interview'];
+const ACTIVE_STATUSES = ['saved', 'applied', 'oa', 'interview'];
 
 const SEASONS = ['Summer 2027', 'Winter 2027'];
 const UNASSIGNED = 'Unassigned';
@@ -18,6 +18,7 @@ const AVATAR_COLORS = ['#2f4f45', '#0f766e', '#2563eb', '#7c3aed', '#c2410c', '#
 let allApps = [];
 let selectedId = null;
 let seasonFilter = 'all';
+let composing = false;
 
 const statusMsg = document.getElementById('status-msg');
 function showStatus(msg, isError = false) {
@@ -95,6 +96,12 @@ document.getElementById('btn-wipe').addEventListener('click', async () => {
 });
 
 document.getElementById('btn-open-web').addEventListener('click', () => openJobMaxxing('/applications'));
+document.getElementById('btn-new-role').addEventListener('click', () => {
+  selectedId = null;
+  composing = true;
+  renderList();
+  renderReader();
+});
 
 function seasonCounts() {
   const counts = {};
@@ -272,6 +279,7 @@ function renderRow(job) {
   row.appendChild(main);
   row.appendChild(deleteButton(job));
   row.addEventListener('click', () => {
+    composing = false;
     selectedId = job.id;
     renderList();
     renderReader();
@@ -305,6 +313,10 @@ function statusChip(status) {
 function renderReader() {
   const pane = document.getElementById('read-pane');
   pane.textContent = '';
+  if (composing) {
+    renderComposer(pane);
+    return;
+  }
   const job = allApps.find((a) => a.id === selectedId);
   if (!job) {
     pane.appendChild(readerEmpty());
@@ -315,6 +327,17 @@ function renderReader() {
   reader.className = 'reader';
   const head = document.createElement('div');
   head.className = 'reader-head';
+  const backButton = document.createElement('button');
+  backButton.className = 'btn btn-secondary reader-back';
+  backButton.type = 'button';
+  backButton.textContent = 'Back';
+  backButton.setAttribute('aria-label', 'Back to applications');
+  backButton.addEventListener('click', () => {
+    selectedId = null;
+    renderList();
+    renderReader();
+  });
+  head.appendChild(backButton);
   head.appendChild(makeAvatar(job.company));
   const titles = document.createElement('div');
   titles.className = 'reader-titles';
@@ -354,7 +377,7 @@ function renderReader() {
   const openBtn = document.createElement('button');
   openBtn.className = 'btn btn-secondary';
   openBtn.textContent = 'Open in JobMaxxing';
-  openBtn.addEventListener('click', () => openJobMaxxing(`/applications/${job.id}`));
+  openBtn.addEventListener('click', () => openJobMaxxing(`/applications?id=${job.id}`));
   actions.appendChild(openBtn);
   reader.appendChild(actions);
 
@@ -385,6 +408,124 @@ function renderReader() {
   }
   reader.appendChild(body);
   pane.appendChild(reader);
+}
+
+function renderComposer(pane) {
+  const composer = document.createElement('form');
+  composer.className = 'composer';
+  composer.innerHTML = `
+    <div class="composer-toolbar">
+      <button class="btn btn-secondary" data-compose-cancel type="button">Cancel</button>
+      <h2>New role</h2>
+      <span class="draft-badge">Draft</span>
+      <span class="spacer"></span>
+      <button class="btn btn-primary" data-compose-save type="submit">Save role</button>
+    </div>
+    <div class="composer-card">
+      <div class="compose-line">
+        <label for="compose-company">To</label>
+        <input id="compose-company" name="company" placeholder="Company name" autocomplete="organization" required>
+      </div>
+      <div class="compose-line subject">
+        <label for="compose-title">Subject</label>
+        <input id="compose-title" name="title" placeholder="Role title" required>
+      </div>
+      <div class="compose-grid">
+        <div class="compose-field"><label for="compose-location">Location</label><input id="compose-location" name="location" placeholder="Remote or city"></div>
+        <div class="compose-field"><label for="compose-date">Applied</label><input id="compose-date" name="date" type="date"></div>
+        <div class="compose-field"><label for="compose-status">Status</label><select id="compose-status" name="status"></select></div>
+        <div class="compose-field"><label for="compose-season">Recruiting season</label><select id="compose-season" name="season"><option value="">Unassigned</option></select></div>
+      </div>
+      <div class="compose-grid two">
+        <div class="compose-field"><label for="compose-url">Job URL</label><input id="compose-url" name="url" type="url" placeholder="https://company.com/careers/role"></div>
+      </div>
+      <div class="compose-body">
+        <label for="compose-description">Job description</label>
+        <textarea id="compose-description" name="description" placeholder="Paste the role description here, just like writing the body of an email…"></textarea>
+      </div>
+      <div class="compose-body notes">
+        <label for="compose-notes">Private notes</label>
+        <textarea id="compose-notes" name="notes" placeholder="Recruiter context, interview prep, or follow-up details"></textarea>
+      </div>
+      <div class="compose-footer">
+        <span class="compose-message" data-compose-message>⌘ Enter to save</span>
+        <button class="btn btn-secondary" data-compose-cancel type="button">Discard</button>
+        <button class="btn btn-primary" data-compose-save type="submit">Save role</button>
+      </div>
+    </div>`;
+
+  const status = composer.querySelector('#compose-status');
+  STATUS_ORDER.forEach((value) => status.appendChild(new Option(STATUS_LABEL[value], value)));
+  status.value = 'saved';
+  const season = composer.querySelector('#compose-season');
+  SEASONS.forEach((value) => season.appendChild(new Option(value, value)));
+
+  const close = () => {
+    composing = false;
+    renderList();
+    renderReader();
+  };
+  composer.querySelectorAll('[data-compose-cancel]').forEach((button) => {
+    button.addEventListener('click', close);
+  });
+  composer.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const company = composer.querySelector('#compose-company');
+    const title = composer.querySelector('#compose-title');
+    const message = composer.querySelector('[data-compose-message]');
+    if (!company.value.trim() || !title.value.trim()) {
+      const missing = company.value.trim() ? title : company;
+      missing.reportValidity();
+      missing.focus();
+      return;
+    }
+
+    const saveButtons = [...composer.querySelectorAll('[data-compose-save]')];
+    saveButtons.forEach((button) => { button.disabled = true; });
+    message.className = 'compose-message';
+    message.textContent = 'Saving role…';
+    try {
+      const response = await send(MSG.SAVE_APPLICATION, {
+        app: {
+          id: crypto.randomUUID(),
+          title: title.value.trim(),
+          company: company.value.trim(),
+          location: composer.querySelector('#compose-location').value.trim(),
+          appliedAt: composer.querySelector('#compose-date').value || null,
+          status: status.value,
+          season: season.value || null,
+          description: composer.querySelector('#compose-description').value.trim(),
+          notes: composer.querySelector('#compose-notes').value.trim(),
+          jobUrl: composer.querySelector('#compose-url').value.trim() || null,
+        },
+      });
+      if (!response || response.error || response.ok === false) {
+        throw new Error(response?.error || 'The role could not be saved.');
+      }
+      if (response.dupe) {
+        message.className = 'compose-message error';
+        message.textContent = `Already tracked: ${response.dupe.roleTitle || 'this role'}`;
+        return;
+      }
+      selectedId = response.app?.id ?? null;
+      composing = false;
+      await refresh();
+    } catch (error) {
+      message.className = 'compose-message error';
+      message.textContent = error instanceof Error ? error.message : 'The role could not be saved.';
+    } finally {
+      saveButtons.forEach((button) => { button.disabled = false; });
+    }
+  });
+  composer.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      event.preventDefault();
+      composer.requestSubmit();
+    }
+  });
+
+  pane.appendChild(composer);
+  composer.querySelector('#compose-company').focus();
 }
 
 function readerEmpty() {
@@ -458,6 +599,11 @@ document.getElementById('drawer-close').addEventListener('click', closeDrawer);
 backdrop.addEventListener('click', closeDrawer);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+  else if (e.key === 'Escape' && composing) {
+    composing = false;
+    renderList();
+    renderReader();
+  }
 });
 
 function download(filename, content, type) {

@@ -18,5 +18,19 @@ export const MSG = {
 };
 
 export function send(type, payload = {}) {
-  return chrome.runtime.sendMessage({ type, ...payload });
+  return new Promise((resolve, reject) => {
+    if (!chrome.runtime?.id) {
+      reject(new Error('Extension was reloaded — close and reopen this page.'));
+      return;
+    }
+
+    chrome.runtime.sendMessage({ type, ...payload }, (response) => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        reject(new Error(err.message));
+        return;
+      }
+      resolve(response ?? null);
+    });
+  });
 }

@@ -1,4 +1,4 @@
-import { APP_URL } from '../../config.local.js';
+import { APP_URL } from '../../config.js';
 import { getAccessToken } from '../auth/session.js';
 
 async function apiFetch(path, options = {}) {
@@ -67,8 +67,9 @@ export async function analyzeApplication(applicationId, sourceText) {
   });
 }
 
-export function applicationUrl(id) {
-  return `${APP_URL}/applications/${id}`;
+export function applicationUrl(id, view = "overview") {
+  const viewParam = view && view !== "overview" ? `&view=${view}` : "";
+  return `${APP_URL}/applications?id=${id}${viewParam}`;
 }
 
 export function openJobMaxxing(path = '/applications') {

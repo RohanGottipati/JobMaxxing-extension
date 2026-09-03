@@ -13,6 +13,7 @@ export function toApiStatus(status) {
 }
 
 export const STATUS_LABEL = {
+  saved: 'Saved',
   applied: 'Applied',
   oa: 'OA',
   interview: 'Interview',

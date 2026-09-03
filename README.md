@@ -4,7 +4,7 @@ Chrome extension forked from [JobTrack](https://github.com/zhao0524/JobTrack), r
 
 ## Features
 
-- **Track Job** pill on LinkedIn, Workday, Greenhouse, Lever, and Ashby
+- Job-page detection on LinkedIn, Workday, Greenhouse, Lever, and Ashby
 - Popup: Grab This Page, Add Manually, Combine PDFs, application count
 - **Dashboard** (`options/options.html`): term rail, searchable list, reading pane, status/season edits
 - Settings drawer: export/import JSON & CSV, follow-up reminders, refresh, wipe
@@ -12,7 +12,7 @@ Chrome extension forked from [JobTrack](https://github.com/zhao0524/JobTrack), r
 
 ## Setup
 
-1. Copy `config.example.js` → `config.local.js`:
+1. Copy `config.example.js` → `config.js`:
 
 ```js
 export const SUPABASE_URL = 'https://your-project.supabase.co';
@@ -30,7 +30,7 @@ export const APP_URL = 'https://jobmaxxing.app'; // or http://localhost:3000
 
 - **Popup** — quick capture, PDF merge, link to dashboard
 - **Dashboard** — browse/filter applications; click **Open in JobMaxxing** for full AI workflows
-- **Content pill** — capture directly from supported job boards
+- **Popup capture** — use “Grab This Page” to capture supported job boards without overlaying the page
 
 ## Related repo
 

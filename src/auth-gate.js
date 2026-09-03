@@ -20,23 +20,42 @@ export function bindAuthForm({ onSignedIn }) {
   const signOutBtn = document.getElementById('btn-sign-out');
   const sessionLabel = document.getElementById('session-label');
 
+  function showLogin(message = '') {
+    if (loginView) loginView.style.display = '';
+    if (appView) appView.style.display = 'none';
+    if (sessionLabel) sessionLabel.textContent = message || 'Sign in required';
+  }
+
+  function showApp(email) {
+    if (loginView) loginView.style.display = 'none';
+    if (appView) appView.style.display = '';
+    if (sessionLabel) sessionLabel.textContent = email ?? 'Signed in';
+  }
+
   async function refresh() {
-    const session = await getSession();
-    if (session?.signedIn) {
-      loginView.style.display = 'none';
-      appView.style.display = '';
-      if (sessionLabel) sessionLabel.textContent = session.email ?? 'Signed in';
-      onSignedIn?.();
-      return true;
+    try {
+      const session = await getSession();
+      if (session?.error) throw new Error(session.error);
+      if (session?.signedIn) {
+        showApp(session.email);
+        await onSignedIn?.();
+        return true;
+      }
+      showLogin();
+      return false;
+    } catch (error) {
+      showLogin('Extension unavailable');
+      if (loginError) {
+        loginError.textContent =
+          error instanceof Error ? error.message : 'Could not reach the extension background.';
+        loginError.style.display = 'block';
+      }
+      return false;
     }
-    loginView.style.display = '';
-    appView.style.display = 'none';
-    if (sessionLabel) sessionLabel.textContent = 'Sign in required';
-    return false;
   }
 
   signInBtn?.addEventListener('click', async () => {
-    loginError.style.display = 'none';
+    if (loginError) loginError.style.display = 'none';
     try {
       const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
@@ -44,15 +63,22 @@ export function bindAuthForm({ onSignedIn }) {
       if (res?.error) throw new Error(res.error);
       await refresh();
     } catch (error) {
-      loginError.textContent = error.message ?? 'Sign in failed';
-      loginError.style.display = 'block';
+      if (loginError) {
+        loginError.textContent = error instanceof Error ? error.message : 'Sign in failed';
+        loginError.style.display = 'block';
+      }
     }
   });
 
   signOutBtn?.addEventListener('click', async () => {
-    await signOut();
-    await refresh();
+    try {
+      await signOut();
+    } catch {
+      // Clear local UI even if background is unavailable.
+    }
+    showLogin();
   });
 
+  void refresh();
   return refresh;
 }

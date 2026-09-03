@@ -16,6 +16,10 @@ import {
 
 const ALARM_PREFIX = 'followup:';
 
+chrome.runtime.onInstalled.addListener(() => {
+  // Ensures the service worker registers cleanly after install/reload.
+});
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   handleMessage(msg, sender).then(sendResponse).catch((err) => {
     console.error('[jobmaxxing] message error:', err);
@@ -65,7 +69,9 @@ async function handleMessage(msg, sender) {
       await requireUser();
       const app = { ...msg.app };
       if (!app.id) app.id = crypto.randomUUID();
-      if (!app.appliedAt) app.appliedAt = new Date().toISOString().slice(0, 10);
+      if (!app.appliedAt && app.status !== 'saved') {
+        app.appliedAt = new Date().toISOString().slice(0, 10);
+      }
 
       try {
         const saved = await saveApplication(app);
