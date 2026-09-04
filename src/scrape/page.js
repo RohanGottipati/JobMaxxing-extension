@@ -330,7 +330,11 @@ export function scrapePage() {
       .replace(/\s+(?:careers?|jobs?)$/i, '')
       .trim();
     if (!candidate || candidate.length > 160) return '';
-    if (/^(?:company|employer|careers?|jobs?|job board)$/i.test(candidate)) return '';
+    if (
+      /^(?:company|employer|careers?|jobs?|job board|careers? home|jobs? home|job search|search jobs?|search careers?|career opportunities|view (?:all )?jobs?)$/i.test(candidate)
+    ) {
+      return '';
+    }
     if (
       !allowPlatformName &&
       /^(?:linkedin(?: jobs)?|workday|greenhouse|lever|ashby)(?: recruiting)?$/i.test(candidate)

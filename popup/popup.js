@@ -1,4 +1,5 @@
 import { bindAuthForm } from '../src/auth-gate.js';
+import { getInstantSession, getSessionDisplay } from '../src/auth/session.js';
 import { MSG, send } from '../src/messages.js';
 import { openApplication, openJobMaxxing } from '../src/api/jobmaxxing.js';
 import {
@@ -10,6 +11,7 @@ import { fromApiStatus } from '../src/mapping.js';
 import { getCachedIndex } from '../src/storage.js';
 import { STATUS_LABEL } from '../src/status-map.js';
 import { todayLocalDate } from '../src/util/date.js';
+import { defaultMergedPdfName } from '../src/util/pdf-name.js';
 import { findByJobUrl } from '../src/util/job-url.js';
 import { captureEligibility } from '../src/util/tab-url.js';
 
@@ -595,15 +597,36 @@ const mergeStatus = document.getElementById('merge-status');
 const btnMergeGo = document.getElementById('btn-merge-go');
 const btnMergeClear = document.getElementById('btn-merge-clear');
 let mergeFiles = [];
+let mergeDefaultName = defaultMergedPdfName();
 
 function openMergeView() {
   mergeFiles = [];
   renderMergeList();
   setMergeStatus('');
-  mergeName.value = 'combined.pdf';
+  mergeDefaultName = defaultMergedPdfName();
+  mergeName.value = mergeDefaultName;
   home.style.display = 'none';
   mergeView.style.display = 'flex';
   replayEnter(mergeView);
+
+  let suggestedName = mergeName.value;
+  void (async () => {
+    const applySuggestedName = (session) => {
+      const preferredName = defaultMergedPdfName({
+        fullName: session?.fullName,
+        email: session?.email,
+      });
+      mergeDefaultName = preferredName;
+      if (mergeName.value === suggestedName) {
+        mergeName.value = preferredName;
+        suggestedName = preferredName;
+      }
+    };
+
+    applySuggestedName(await getInstantSession());
+    applySuggestedName(await getSessionDisplay());
+  })()
+    .catch(() => {});
 }
 function closeMergeView() {
   mergeView.style.display = 'none';
@@ -679,7 +702,7 @@ async function combineAndDownload() {
       pages.forEach((p) => out.addPage(p));
     }
     const merged = await out.save();
-    let name = (mergeName.value || 'combined.pdf').trim();
+    let name = (mergeName.value || mergeDefaultName).trim();
     if (!/\.pdf$/i.test(name)) name += '.pdf';
     const blob = new Blob([merged], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);

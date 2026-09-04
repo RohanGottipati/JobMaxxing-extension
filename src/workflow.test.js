@@ -12,6 +12,7 @@ import {
 } from './document-policy.js';
 import { fromTrackApp, toTrackApp } from './mapping.js';
 import { todayLocalDate } from './util/date.js';
+import { defaultMergedPdfName } from './util/pdf-name.js';
 import {
   captureEligibility,
   injectionFailure,
@@ -47,6 +48,22 @@ test('builds a user-scoped application-package path with a safe filename', () =>
 
 test('uses the browser local date instead of a UTC slice', () => {
   assert.equal(todayLocalDate(new Date(2026, 8, 3, 23, 30)), '2026-09-03');
+});
+
+test('defaults merged PDFs to the signed-in first and last name', () => {
+  assert.equal(
+    defaultMergedPdfName({ fullName: 'rohan gottipati' }),
+    'Rohan_Gottipati_Application.pdf',
+  );
+  assert.equal(
+    defaultMergedPdfName({ fullName: 'Mary Jane van Dyke' }),
+    'Mary_Dyke_Application.pdf',
+  );
+  assert.equal(
+    defaultMergedPdfName({ email: 'rohan.gottipati@example.com' }),
+    'Rohan_Gottipati_Application.pdf',
+  );
+  assert.equal(defaultMergedPdfName(), 'Application.pdf');
 });
 
 test('classifies scriptable tabs and expected Chrome injection failures', () => {

@@ -96,7 +96,12 @@ async function handleMessage(msg, sender) {
     case MSG.SIGN_IN: {
       const session = await signIn(msg.email, msg.password);
       const display = await getSessionDisplay();
-      return { ok: true, email: display?.email ?? session.user?.email, displayName: display?.displayName ?? null };
+      return {
+        ok: true,
+        email: display?.email ?? session.user?.email,
+        fullName: display?.fullName ?? null,
+        displayName: display?.displayName ?? null,
+      };
     }
 
     case MSG.SIGN_OUT: {
@@ -115,6 +120,7 @@ async function handleMessage(msg, sender) {
           ok: true,
           signedIn: true,
           email: instant.email ?? null,
+          fullName: instant.fullName ?? null,
           displayName: instant.displayName ?? null,
         };
       }
@@ -124,6 +130,7 @@ async function handleMessage(msg, sender) {
         ok: true,
         signedIn: Boolean(session),
         email: session?.email ?? null,
+        fullName: session?.fullName ?? null,
         displayName: session?.displayName ?? null,
       };
     }

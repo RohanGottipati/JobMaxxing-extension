@@ -48,18 +48,20 @@ export async function getInstantSession() {
   const cached = await getCachedSessionDisplay();
   const user = session.user;
   const email = cached?.email || user?.email || null;
+  const fullName =
+    cached?.fullName ||
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.user_metadata?.display_name ||
+    '';
   const displayName =
     cached?.displayName ||
-    formatShortName(
-      user?.user_metadata?.full_name ||
-        user?.user_metadata?.name ||
-        user?.user_metadata?.display_name,
-      email,
-    );
+    formatShortName(fullName, email);
 
   return {
     signedIn: true,
     email,
+    fullName,
     displayName,
     cached: Boolean(cached?.displayName),
   };
@@ -190,28 +192,27 @@ export async function getSessionDisplay({ refresh = true } = {}) {
     user.user_metadata?.display_name ||
     '';
 
-  if (!fullName) {
-    try {
-      const token = await getAccessToken();
-      const response = await fetchWithNetworkError(
-        `${SUPABASE_URL}/rest/v1/profiles?select=full_name&id=eq.${user.id}`,
-        { headers: { ...authHeaders(token), Accept: 'application/json' } },
-        {
-          service: 'Supabase',
-          hint: 'Check your connection and SUPABASE_URL in config.js, then try again.',
-        },
-      );
-      if (response.ok) {
-        const rows = await response.json();
-        fullName = rows?.[0]?.full_name || '';
-      }
-    } catch {
-      // Fall back to email local-part.
+  try {
+    const token = await getAccessToken();
+    const response = await fetchWithNetworkError(
+      `${SUPABASE_URL}/rest/v1/profiles?select=full_name&id=eq.${user.id}`,
+      { headers: { ...authHeaders(token), Accept: 'application/json' } },
+      {
+        service: 'Supabase',
+        hint: 'Check your connection and SUPABASE_URL in config.js, then try again.',
+      },
+    );
+    if (response.ok) {
+      const rows = await response.json();
+      fullName = rows?.[0]?.full_name || fullName;
     }
+  } catch {
+    // Keep the auth-metadata name or fall back to the email local-part.
   }
 
   const display = {
     email: user.email ?? null,
+    fullName,
     displayName: formatShortName(fullName, user.email),
   };
   await storeSessionDisplay(display);
