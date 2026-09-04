@@ -24,7 +24,10 @@
 }
 
 body {
-  width: 340px;
+  /* Hosted in the side panel: fill its (resizable) width rather than a fixed
+     popup width, with a sensible minimum. */
+  width: 100%;
+  min-width: 300px;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   color: var(--foreground);
@@ -33,7 +36,7 @@ body {
     linear-gradient(to right, rgb(41 40 36 / 5.5%) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(41 40 36 / 5.5%) 1px, transparent 1px);
   background-size: 28px 28px;
-  overflow: hidden;
+  overflow-x: hidden;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }

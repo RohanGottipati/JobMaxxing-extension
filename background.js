@@ -3,6 +3,12 @@ import {
   analyzeApplication,
 } from './src/api/jobmaxxing.js';
 import { getCurrentUser, getInstantSession, getSessionDisplay, signIn, signOut } from './src/auth/session.js';
+import {
+  installWebSessionSync,
+  pushSessionToWeb,
+  pushSignOutToWeb,
+  syncFromWeb,
+} from './src/auth/web-sync.js';
 import { isNetworkUnavailableError } from './src/network.js';
 import { detectJobPostingPage, scrapePage } from './src/scrape/page.js';
 import {
@@ -28,6 +34,16 @@ const ALARM_PREFIX = 'followup:';
 chrome.runtime.onInstalled.addListener(() => {
   // Ensures the service worker registers cleanly after install/reload.
 });
+
+// Mirror the website's login state into the extension: adopt its session when
+// signed in, clear ours when it signs out.
+installWebSessionSync();
+
+// Open the extension UI in the side panel when the toolbar icon is clicked, so it
+// stays open while you click around pages and tabs (a normal popup would close).
+chrome.sidePanel
+  ?.setPanelBehavior?.({ openPanelOnActionClick: true })
+  .catch((error) => console.warn('[jobmaxxing] side panel unavailable:', error));
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   handleMessage(msg, sender)
@@ -95,6 +111,8 @@ async function handleMessage(msg, sender) {
   switch (msg.type) {
     case MSG.SIGN_IN: {
       const session = await signIn(msg.email, msg.password);
+      // Mirror into the website's cookies so signing in here logs the site in too.
+      await pushSessionToWeb(session);
       const display = await getSessionDisplay();
       return {
         ok: true,
@@ -106,11 +124,15 @@ async function handleMessage(msg, sender) {
 
     case MSG.SIGN_OUT: {
       await signOut();
+      // Mirror the sign-out to the website so it logs out too.
+      await pushSignOutToWeb();
       await clearIndexCache();
       return { ok: true };
     }
 
     case MSG.GET_SESSION: {
+      // Reflect the website's current login state before reporting ours.
+      await syncFromWeb();
       const instant = await getInstantSession();
       if (instant.signedIn && instant.cached) {
         // Cached identity is enough to render immediately. A background

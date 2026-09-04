@@ -3,7 +3,7 @@
   "name": "JobMaxxing",
   "version": "1.2.0",
   "description": "Capture job postings and track your applications with JobMaxxing.",
-  "permissions": ["storage", "activeTab", "scripting", "alarms", "tabs"],
+  "permissions": ["storage", "activeTab", "scripting", "alarms", "tabs", "cookies", "sidePanel"],
   "host_permissions": [
     "*://*.linkedin.com/*",
     "*://*.myworkdayjobs.com/*",
@@ -20,13 +20,15 @@
     "type": "module"
   },
   "action": {
-    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
+  },
+  "side_panel": {
+    "default_path": "popup/popup.html"
   },
   "content_scripts": [
     {

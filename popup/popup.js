@@ -730,9 +730,17 @@ mergeInput.addEventListener('change', () => { addMergeFiles(mergeInput.files); m
 ['dragleave', 'drop'].forEach((ev) => mergeDrop.addEventListener(ev, (e) => { e.preventDefault(); mergeDrop.classList.remove('dragover'); }));
 mergeDrop.addEventListener('drop', (e) => { if (e.dataTransfer?.files?.length) addMergeFiles(e.dataTransfer.files); });
 
-bindAuthForm({
+const refreshAuth = bindAuthForm({
   onHydrate: hydrateHome,
   onSignedIn: refreshHome,
+});
+
+// The background mirrors the website's login state into chrome.storage. When it
+// changes (e.g. you log in/out on the website), re-render the popup's auth state.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes['jobmaxxing.session']) {
+    void refreshAuth();
+  }
 });
 
 document.getElementById('link-signup')?.addEventListener('click', () => openJobMaxxing('/signup'));

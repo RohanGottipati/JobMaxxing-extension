@@ -3,6 +3,10 @@ import { fetchWithNetworkError, isNetworkUnavailableError } from '../network.js'
 
 const SESSION_KEY = 'jobmaxxing.session';
 const DISPLAY_KEY = 'jobmaxxing.sessionDisplay';
+// Tracks where the current session came from: 'web' (mirrored from the website)
+// or 'popup' (signed in directly in the extension). web-sync uses this to decide
+// whether a missing website session should sign the extension out.
+const SOURCE_KEY = 'jobmaxxing.sessionSource';
 
 function authHeaders(token) {
   return {
@@ -26,6 +30,47 @@ async function storeSession(session) {
 export async function getStoredSession() {
   const result = await chrome.storage.local.get(SESSION_KEY);
   return result[SESSION_KEY] ?? null;
+}
+
+async function setSessionSource(source) {
+  if (!source) {
+    await chrome.storage.local.remove(SOURCE_KEY);
+    return;
+  }
+  await chrome.storage.local.set({ [SOURCE_KEY]: source });
+}
+
+export async function getSessionSource() {
+  const result = await chrome.storage.local.get(SOURCE_KEY);
+  return result[SOURCE_KEY] ?? null;
+}
+
+// Adopt a session mirrored from the website. Shape matches signIn()'s output:
+// { access_token, refresh_token, expires_at, user }. The display name is cached
+// straight from the session's user so the popup can render "signed in" without a
+// network round-trip that could transiently fail and sign the user back out.
+export async function adoptSession(session) {
+  await storeSession(session);
+  await setSessionSource('web');
+  const user = session?.user;
+  if (user) {
+    const fullName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.user_metadata?.display_name ||
+      '';
+    await storeSessionDisplay({
+      email: user.email ?? null,
+      fullName,
+      displayName: formatShortName(fullName, user.email),
+    });
+  }
+}
+
+// Clear the extension's local session without calling Supabase logout (used when
+// the website has already signed out).
+export async function clearLocalSession() {
+  await chrome.storage.local.remove([SESSION_KEY, DISPLAY_KEY, SOURCE_KEY]);
 }
 
 async function storeSessionDisplay(display) {
@@ -132,6 +177,7 @@ export async function signIn(email, password) {
     user: data.user,
   };
   await storeSession(session);
+  await setSessionSource('popup');
   return session;
 }
 
@@ -143,7 +189,7 @@ export async function signOut() {
       headers: authHeaders(session.access_token),
     }).catch(() => {});
   }
-  await chrome.storage.local.remove([SESSION_KEY, DISPLAY_KEY]);
+  await chrome.storage.local.remove([SESSION_KEY, DISPLAY_KEY, SOURCE_KEY]);
 }
 
 export async function getCurrentUser() {
