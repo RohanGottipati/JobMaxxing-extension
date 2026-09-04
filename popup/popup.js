@@ -734,3 +734,6 @@ bindAuthForm({
   onHydrate: hydrateHome,
   onSignedIn: refreshHome,
 });
+
+document.getElementById('link-signup')?.addEventListener('click', () => openJobMaxxing('/signup'));
+document.getElementById('link-forgot')?.addEventListener('click', () => openJobMaxxing('/forgot-password'));
