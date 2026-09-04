@@ -5,7 +5,10 @@ Chrome extension forked from [JobTrack](https://github.com/zhao0524/JobTrack), r
 ## Features
 
 - Job-page detection on LinkedIn, Workday, Greenhouse, Lever, and Ashby
+- Structured job capture with deadline and recruiting-season extraction
 - Popup: Grab This Page, Add Manually, Combine PDFs, application count
+- Optional PDF/DOCX resume and cover-letter uploads saved as the exact submitted package
+- Referral-contact capture and actionable offline/configuration errors
 - Direct synchronization with the JobMaxxing web app
 - Duplicate detection and optional server-side job analysis (when AI consent is enabled)
 

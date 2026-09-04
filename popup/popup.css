@@ -173,7 +173,8 @@ label:focus-within {
   transform: translateY(-1px);
 }
 .action-primary:active:not(:disabled) { transform: translateY(1px); }
-.action-primary:disabled { cursor: progress; opacity: 0.82; transform: none; }
+.action-primary:disabled { cursor: not-allowed; opacity: 0.72; transform: none; }
+.action-primary[aria-busy="true"]:disabled { cursor: progress; opacity: 0.82; }
 .action-primary-icon {
   display: flex;
   align-items: center;
@@ -362,7 +363,8 @@ label:focus-within {
 }
 .compose-line {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 88px minmax(0, 1fr);
+  column-gap: 10px;
   align-items: center;
   min-height: 44px;
   border-bottom: 1px solid var(--border);
@@ -375,6 +377,7 @@ label:focus-within {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 .compose-line input {
   width: 100%;
@@ -448,6 +451,77 @@ label:focus-within {
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 12px;
+}
+
+.package-fields {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--parchment) 45%, var(--elevated));
+}
+.package-heading h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.package-heading p {
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+.package-file {
+  display: grid;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--elevated);
+}
+.package-file > label {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--foreground);
+}
+.package-file input[type="file"] {
+  width: 100%;
+  font: inherit;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.package-file input[type="file"]::file-selector-button {
+  margin-right: 7px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.package-file-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  font-size: 10.5px;
+  color: var(--muted-foreground);
+}
+.package-file-state > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.package-remove {
+  flex-shrink: 0;
+  color: var(--destructive);
+  font-size: 10.5px;
+  align-self: auto;
 }
 
 .merge-drop {

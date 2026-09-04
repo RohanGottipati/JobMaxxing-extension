@@ -3,6 +3,8 @@ import {
   analyzeApplication,
 } from './src/api/jobmaxxing.js';
 import { getCurrentUser, getInstantSession, getSessionDisplay, signIn, signOut } from './src/auth/session.js';
+import { isNetworkUnavailableError } from './src/network.js';
+import { detectJobPostingPage, scrapePage } from './src/scrape/page.js';
 import {
   clearIndexCache,
   deleteApplication,
@@ -14,6 +16,12 @@ import {
   updateApplication,
   wipeAll,
 } from './src/storage.js';
+import { todayLocalDate } from './src/util/date.js';
+import {
+  captureEligibility,
+  injectionFailure,
+  NOT_JOB_POSTING,
+} from './src/util/tab-url.js';
 
 const ALARM_PREFIX = 'followup:';
 
@@ -25,7 +33,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   handleMessage(msg, sender)
     .then((result) => respond(sendResponse, result))
     .catch((err) => {
-      console.error('[jobmaxxing] message error:', err);
+      const expectedInjectionFailure = injectionFailure(err);
+      if (expectedInjectionFailure) {
+        respond(sendResponse, {
+          ...expectedInjectionFailure,
+          error: expectedInjectionFailure.message,
+        });
+        return;
+      }
+      if (isNetworkUnavailableError(err)) {
+        console.warn('[jobmaxxing] connection unavailable:', err.message);
+      } else {
+        console.error('[jobmaxxing] message error:', err);
+      }
       respond(sendResponse, { error: err instanceof Error ? err.message : String(err) });
     });
   return true;
@@ -63,6 +83,14 @@ async function maybeAnalyze(savedApp, sourceText) {
   }
 }
 
+async function inspectJobPostingTab(tabId) {
+  const [injection] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: detectJobPostingPage,
+  });
+  return injection?.result || { isJobPosting: false, signal: null };
+}
+
 async function handleMessage(msg, sender) {
   switch (msg.type) {
     case MSG.SIGN_IN: {
@@ -80,7 +108,9 @@ async function handleMessage(msg, sender) {
     case MSG.GET_SESSION: {
       const instant = await getInstantSession();
       if (instant.signedIn && instant.cached) {
-        void getSessionDisplay();
+        // Cached identity is enough to render immediately. A background
+        // refresh is best-effort and must not become an unhandled rejection.
+        void getSessionDisplay().catch(() => {});
         return {
           ok: true,
           signedIn: true,
@@ -103,7 +133,7 @@ async function handleMessage(msg, sender) {
       const app = { ...msg.app };
       delete app.id;
       if (!app.appliedAt && app.status !== 'saved') {
-        app.appliedAt = new Date().toISOString().slice(0, 10);
+        app.appliedAt = todayLocalDate();
       }
 
       try {
@@ -133,10 +163,18 @@ async function handleMessage(msg, sender) {
       if (!existing) return { ok: false, error: 'Not found' };
       const updated = { ...existing, ...msg.app };
       if (updated.status && updated.status !== 'saved' && !updated.appliedAt) {
-        updated.appliedAt = new Date().toISOString().slice(0, 10);
+        updated.appliedAt = todayLocalDate();
       }
-      const saved = await updateApplication(updated);
-      if (saved?.duplicate) return { ok: false, dupe: saved.duplicate };
+      let saved;
+      try {
+        saved = await updateApplication(updated);
+        if (saved?.duplicate) return { ok: true, app: updated, dupe: saved.duplicate };
+      } catch (error) {
+        if (error.status === 409 && error.payload?.duplicate) {
+          return { ok: true, app: updated, dupe: error.payload.duplicate };
+        }
+        throw error;
+      }
       if (saved?.status === 'applied') {
         const prefs = await getPrefs();
         if (prefs.followupEnabled) scheduleFollowup(saved.id, prefs.followupDays);
@@ -201,19 +239,55 @@ async function handleMessage(msg, sender) {
       return { ok: true };
     }
 
+    case MSG.CHECK_JOB_PAGE:
     case MSG.SCRAPE_TAB: {
       const tabId = msg.tabId ?? sender.tab?.id;
       if (!tabId) return { ok: false, error: 'No active tab' };
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        files: ['src/scrape/inject.js'],
-      });
-      const [injection] = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => globalThis.__jobMaxxingScrapePage?.() ?? null,
-      });
+      const tab = await chrome.tabs.get(tabId).catch(() => null);
+      const eligibility = captureEligibility(tab?.url);
+      if (!eligibility.ok) {
+        return { ok: false, code: eligibility.code, error: eligibility.message };
+      }
+
+      let inspection;
+      try {
+        inspection = await inspectJobPostingTab(tabId);
+      } catch (error) {
+        const expected = injectionFailure(error);
+        if (expected) {
+          return { ok: false, code: expected.code, error: expected.message };
+        }
+        throw error;
+      }
+      if (!inspection.isJobPosting) {
+        return {
+          ok: msg.type === MSG.CHECK_JOB_PAGE,
+          isJobPosting: false,
+          code: NOT_JOB_POSTING,
+          error: msg.type === MSG.SCRAPE_TAB
+            ? 'Open an individual job posting before using Grab.'
+            : null,
+        };
+      }
+      if (msg.type === MSG.CHECK_JOB_PAGE) {
+        return { ok: true, isJobPosting: true, signal: inspection.signal };
+      }
+
+      let injection;
+      try {
+        [injection] = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: scrapePage,
+        });
+      } catch (error) {
+        const expected = injectionFailure(error);
+        if (expected) {
+          return { ok: false, code: expected.code, error: expected.message };
+        }
+        throw error;
+      }
       const scraped = injection?.result;
-      if (!scraped) return { ok: true, scraped: null };
+      if (!scraped) return { ok: false, error: 'No job details were found on this page.' };
       return {
         ok: true,
         scraped: {
@@ -221,6 +295,8 @@ async function handleMessage(msg, sender) {
           company: scraped.company || '',
           location: scraped.location || '',
           description: scraped.description || '',
+          deadline: scraped.deadline || '',
+          recruitingSeason: scraped.recruitingSeason || '',
           sourceHost: scraped.sourceHost || '',
           jobUrl: scraped.jobUrl || '',
         },

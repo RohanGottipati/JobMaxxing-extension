@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JobMaxxing",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "description": "Capture job postings and track your applications with JobMaxxing.",
   "permissions": ["storage", "activeTab", "scripting", "alarms", "tabs"],
   "host_permissions": [
@@ -37,7 +37,7 @@
         "*://*.lever.co/*",
         "*://*.ashbyhq.com/*"
       ],
-      "js": ["src/scrape/inject.js", "content/content.js"],
+      "js": ["content/content.js"],
       "run_at": "document_idle"
     }
   ],

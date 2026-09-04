@@ -1,10 +1,17 @@
 import { bindAuthForm } from '../src/auth-gate.js';
 import { MSG, send } from '../src/messages.js';
 import { openApplication, openJobMaxxing } from '../src/api/jobmaxxing.js';
+import {
+  removeApplicationDocuments,
+  uploadApplicationDocument,
+} from '../src/api/documents.js';
+import { validateDocumentFile } from '../src/document-policy.js';
 import { fromApiStatus } from '../src/mapping.js';
 import { getCachedIndex } from '../src/storage.js';
 import { STATUS_LABEL } from '../src/status-map.js';
+import { todayLocalDate } from '../src/util/date.js';
 import { findByJobUrl } from '../src/util/job-url.js';
+import { captureEligibility } from '../src/util/tab-url.js';
 
 const SEASONS = ['Summer 2027', 'Winter 2027'];
 let editingId = null;
@@ -14,8 +21,14 @@ let indexCache = [];
 let pageMatch = null;
 let justSaved = null;
 let lastAction = null;
+let grabEligibility = { ok: false, code: null, message: '' };
+let grabError = null;
+let grabHintRequest = 0;
+let grabHintResolved = false;
+let appliedDateIsAutomatic = false;
+let resumeFile = null;
+let coverLetterFile = null;
 
-const JOB_HOSTS = ['linkedin.com', 'myworkdayjobs.com', 'greenhouse.io', 'lever.co', 'ashbyhq.com'];
 const GRAB_ICON = `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3.5A1.5 1.5 0 015.5 2h5.086a1.5 1.5 0 011.06.44l3.914 3.914A1.5 1.5 0 0116 7.414V16.5A1.5 1.5 0 0114.5 18h-9A1.5 1.5 0 014 16.5v-13zM10.5 3H5.5a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V8h-3.5A1.5 1.5 0 0110.5 6.5V3zm1 0v3.5a.5.5 0 00.5.5H15.5L11.5 3zM7 11.25a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 017 11.25zm.75 2.5a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5z"/></svg>`;
 
 const home = document.getElementById('home');
@@ -38,6 +51,13 @@ const fNext = document.getElementById('f-next');
 const fUrl = document.getElementById('f-url');
 const fDesc = document.getElementById('f-desc');
 const fNotes = document.getElementById('f-notes');
+const fReferral = document.getElementById('f-referral');
+const fResume = document.getElementById('f-resume');
+const fCoverLetter = document.getElementById('f-cover-letter');
+const fResumeMeta = document.getElementById('f-resume-meta');
+const fCoverLetterMeta = document.getElementById('f-cover-letter-meta');
+const btnRemoveResume = document.getElementById('btn-remove-resume');
+const btnRemoveCoverLetter = document.getElementById('btn-remove-cover-letter');
 const fDupe = document.getElementById('f-dupe');
 const formStateLabel = document.getElementById('form-state-label');
 const btnDelete = document.getElementById('btn-delete');
@@ -105,11 +125,12 @@ async function loadIndex() {
 
 async function hydrateHome() {
   const cached = await getCachedIndex();
-  if (!cached) return;
-  applyIndex(cached);
-  await detectPageMatch();
-  renderNotice();
-  renderRecent();
+  if (cached) {
+    applyIndex(cached);
+    await detectPageMatch();
+    renderNotice();
+    renderRecent();
+  }
   await updateGrabHint();
 }
 
@@ -170,7 +191,8 @@ async function refreshHome() {
   await detectPageMatch();
   renderNotice();
   renderRecent();
-  await updateGrabHint();
+  if (grabHintResolved) syncResolvedGrabHint();
+  else await updateGrabHint();
 }
 
 document.addEventListener('keydown', (e) => {
@@ -189,30 +211,78 @@ function replayEnter(el) {
 }
 
 function setGrabBusy(busy) {
-  btnGrab.disabled = busy;
+  btnGrab.disabled = busy || !grabEligibility.ok;
   btnGrab.setAttribute('aria-busy', busy ? 'true' : 'false');
-  grabTitle.textContent = busy ? 'Capturing…' : pageMatch ? 'Update this page' : 'Grab this page';
+  if (busy) grabTitle.textContent = 'Capturing…';
   grabIcon.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span>' : GRAB_ICON;
 }
 
-async function updateGrabHint() {
-  if (btnGrab.disabled) return;
+function syncResolvedGrabHint() {
+  if (!grabHintResolved || !grabEligibility.ok || btnGrab.getAttribute('aria-busy') === 'true') {
+    return;
+  }
   if (pageMatch) {
-    grabTitle.textContent = 'Update this page';
+    grabTitle.textContent = 'Update this posting';
     grabSub.textContent = [pageMatch.company, statusLabel(pageMatch.status)].filter(Boolean).join(' · ');
     return;
   }
+  grabTitle.textContent = grabError ? 'Capture unavailable' : 'Grab this posting';
+  grabSub.textContent = grabError || 'Capture the role and job description';
+}
 
-  grabTitle.textContent = 'Grab this page';
+async function updateGrabHint() {
+  if (btnGrab.getAttribute('aria-busy') === 'true') return;
+  const request = ++grabHintRequest;
+  grabEligibility = { ok: false, code: null, message: '' };
+  btnGrab.disabled = true;
+  if (!grabHintResolved) {
+    btnGrab.title = 'Checking whether this tab is a job posting';
+    grabTitle.textContent = 'Checking this page…';
+    grabSub.textContent = 'Grab works only on individual job postings';
+  }
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const host = tab?.url ? new URL(tab.url).hostname : '';
-    const supported = JOB_HOSTS.some((item) => host === item || host.endsWith(`.${item}`));
-    grabSub.textContent = supported
-      ? 'Capture the posting on this tab'
-      : 'Works best on LinkedIn, Greenhouse, Lever, Ashby, and Workday';
-  } catch {
-    grabSub.textContent = 'Capture the posting on this tab';
+    if (request !== grabHintRequest) return;
+    grabEligibility = captureEligibility(tab?.url);
+    if (!grabEligibility.ok) {
+      grabTitle.textContent = 'Not a job posting';
+      grabSub.textContent = '';
+      btnGrab.title = 'Not a job posting';
+      btnGrab.disabled = true;
+      grabHintResolved = true;
+      return;
+    }
+
+    const result = await send(MSG.CHECK_JOB_PAGE, { tabId: tab.id });
+    if (request !== grabHintRequest) return;
+    if (!result?.ok || result.error) {
+      throw new Error(result?.error || 'Could not inspect this page.');
+    }
+    if (!result.isJobPosting) {
+      const message = 'Not a job posting';
+      grabEligibility = { ok: false, code: result.code, message };
+      grabTitle.textContent = 'Not a job posting';
+      grabSub.textContent = '';
+      btnGrab.title = message;
+      btnGrab.disabled = true;
+      grabHintResolved = true;
+      return;
+    }
+
+    grabEligibility = { ok: true, code: null, message: '' };
+    grabHintResolved = true;
+    btnGrab.disabled = false;
+    btnGrab.title = 'Capture the job posting on the current tab';
+    syncResolvedGrabHint();
+  } catch (error) {
+    if (request !== grabHintRequest) return;
+    const message = error instanceof Error ? error.message : 'Could not inspect this page.';
+    grabEligibility = { ok: false, message };
+    grabHintResolved = true;
+    btnGrab.disabled = true;
+    btnGrab.title = message;
+    grabTitle.textContent = message === 'Not a job posting' ? message : 'Can’t check this page';
+    grabSub.textContent = message === 'Not a job posting' ? '' : message;
   }
 }
 
@@ -244,9 +314,17 @@ btnApplyMatch.addEventListener('click', async () => {
 btnGrab.addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
+  grabEligibility = captureEligibility(tab.url);
+  if (!grabEligibility.ok) {
+    grabError = null;
+    await updateGrabHint();
+    return;
+  }
+  grabError = null;
   setGrabBusy(true);
   try {
     const res = await send(MSG.SCRAPE_TAB, { tabId: tab.id });
+    if (!res?.ok || res.error) throw new Error(res?.error || 'Could not capture this page.');
     const scraped = res?.scraped || {};
     let existing = pageMatch;
     if (pageMatch?.id) {
@@ -257,19 +335,25 @@ btnGrab.addEventListener('click', async () => {
         existing = pageMatch;
       }
     }
+    const promoteToApplied = !existing?.id || (existing.status === 'saved' && !existing.appliedAt);
     openAddForm({
       ...(existing || {}),
       title: scraped.title || existing?.title,
       company: scraped.company || existing?.company,
       location: scraped.location || existing?.location,
+      appliedAt: promoteToApplied ? todayLocalDate() : existing?.appliedAt,
+      status: promoteToApplied ? 'applied' : existing?.status,
+      deadline: scraped.deadline || existing?.deadline,
+      season: scraped.recruitingSeason || existing?.season,
       description: scraped.description || existing?.description,
       sourceHost: scraped.sourceHost || existing?.sourceHost,
       jobUrl: scraped.jobUrl || existing?.jobUrl,
     });
-  } catch {
-    openAddForm(pageMatch ? { ...pageMatch } : { title: '', company: '', description: '' });
+  } catch (error) {
+    grabError = error instanceof Error ? error.message : 'Could not capture this page.';
   } finally {
     setGrabBusy(false);
+    await updateGrabHint();
   }
 });
 
@@ -283,14 +367,24 @@ function openAddForm(prefill = {}) {
   fTitle.value = prefill.title || '';
   fCompany.value = prefill.company || '';
   fLocation.value = prefill.location || '';
-  fDate.value = dateInputValue(prefill.appliedAt);
-  fStatus.value = prefill.status || 'saved';
+  const newEntry = !editingId;
+  fDate.value = dateInputValue(prefill.appliedAt) || (newEntry ? todayLocalDate() : '');
+  fStatus.value = prefill.status || (newEntry ? 'applied' : 'saved');
+  appliedDateIsAutomatic = newEntry && !prefill.appliedAt;
+  ensureSeasonOption(prefill.season);
   fSeason.value = prefill.season || '';
   fDeadline.value = dateInputValue(prefill.deadline);
   fNext.value = prefill.nextAction || '';
   fUrl.value = prefill.jobUrl || '';
   fDesc.value = prefill.description || '';
   fNotes.value = prefill.notes || '';
+  fReferral.value = prefill.referralContact || '';
+  resumeFile = null;
+  coverLetterFile = null;
+  fResume.value = '';
+  fCoverLetter.value = '';
+  renderPackageFileState('resume', Boolean(prefill.submittedResumeVersionId));
+  renderPackageFileState('coverLetter', Boolean(prefill.submittedCoverLetterId));
   fDupe.style.display = 'none';
   btnDelete.style.display = editingId ? '' : 'none';
   btnSave.disabled = false;
@@ -307,7 +401,69 @@ function closeForm() {
   editingId = null;
   scrapedJobUrl = null;
   scrapedSourceHost = null;
+  resumeFile = null;
+  coverLetterFile = null;
 }
+
+function ensureSeasonOption(value) {
+  if (!value || [...fSeason.options].some((option) => option.value === value)) return;
+  fSeason.appendChild(new Option(value, value));
+}
+
+function renderPackageFileState(kind, hasExisting = false) {
+  const file = kind === 'resume' ? resumeFile : coverLetterFile;
+  const meta = kind === 'resume' ? fResumeMeta : fCoverLetterMeta;
+  const remove = kind === 'resume' ? btnRemoveResume : btnRemoveCoverLetter;
+  if (file) {
+    meta.textContent = `${file.name} · ${humanSize(file.size)}`;
+    remove.hidden = false;
+  } else {
+    meta.textContent = hasExisting ? 'Submitted file already on record' : 'No file selected';
+    remove.hidden = true;
+  }
+}
+
+function selectPackageFile(kind, input) {
+  const file = input.files?.[0] ?? null;
+  if (file) {
+    const error = validateDocumentFile(file);
+    if (error) {
+      input.value = '';
+      showFormError(`${file.name}: ${error}`);
+      return;
+    }
+  }
+  fDupe.style.display = 'none';
+  if (kind === 'resume') resumeFile = file;
+  else coverLetterFile = file;
+  renderPackageFileState(kind);
+}
+
+fResume.addEventListener('change', () => selectPackageFile('resume', fResume));
+fCoverLetter.addEventListener('change', () => selectPackageFile('coverLetter', fCoverLetter));
+btnRemoveResume.addEventListener('click', () => {
+  resumeFile = null;
+  fResume.value = '';
+  renderPackageFileState('resume');
+});
+btnRemoveCoverLetter.addEventListener('click', () => {
+  coverLetterFile = null;
+  fCoverLetter.value = '';
+  renderPackageFileState('coverLetter');
+});
+fDate.addEventListener('input', () => {
+  appliedDateIsAutomatic = false;
+});
+fStatus.addEventListener('change', () => {
+  if (fStatus.value === 'saved' && appliedDateIsAutomatic) {
+    fDate.value = '';
+    return;
+  }
+  if (fStatus.value !== 'saved' && !fDate.value) {
+    fDate.value = todayLocalDate();
+    appliedDateIsAutomatic = true;
+  }
+});
 
 async function saveForm() {
   const title = fTitle.value.trim();
@@ -319,11 +475,14 @@ async function saveForm() {
     return;
   }
 
-  btnSave.disabled = true;
-  btnSave.textContent = 'Saving…';
-
+  // Snapshot the form before uploads begin. Closing or editing the popup while
+  // a large file is uploading must not turn an update into a new application
+  // or mix values from two different form states.
+  const applicationId = editingId;
+  const selectedResume = resumeFile;
+  const selectedCoverLetter = coverLetterFile;
   const app = {
-    id: editingId || undefined,
+    id: applicationId || undefined,
     title,
     company,
     location: fLocation.value.trim(),
@@ -334,29 +493,60 @@ async function saveForm() {
     season: fSeason.value || null,
     description: fDesc.value.trim(),
     notes: fNotes.value.trim(),
+    referralContact: fReferral.value.trim(),
     jobUrl: fUrl.value.trim() || scrapedJobUrl,
     sourceHost: scrapedSourceHost,
   };
 
-  const msgType = editingId ? MSG.UPDATE_APPLICATION : MSG.SAVE_APPLICATION;
+  btnSave.disabled = true;
+  btnSave.textContent = selectedResume || selectedCoverLetter ? 'Uploading…' : 'Saving…';
+
+  const uploadedPaths = [];
+  let submittedFiles;
+  try {
+    const files = {};
+    if (selectedResume) {
+      files.resume = await uploadApplicationDocument(selectedResume);
+      uploadedPaths.push(files.resume.path);
+    }
+    if (selectedCoverLetter) {
+      files.coverLetter = await uploadApplicationDocument(selectedCoverLetter);
+      uploadedPaths.push(files.coverLetter.path);
+    }
+    if (Object.keys(files).length) submittedFiles = files;
+    btnSave.textContent = 'Saving…';
+  } catch (error) {
+    await removeApplicationDocuments(uploadedPaths);
+    showFormError(`Upload failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    btnSave.disabled = false;
+    btnSave.textContent = applicationId ? 'Save changes' : 'Save role';
+    return;
+  }
+
+  if (submittedFiles) app.submittedFiles = submittedFiles;
+
+  const msgType = applicationId ? MSG.UPDATE_APPLICATION : MSG.SAVE_APPLICATION;
   let res;
   try {
     res = await send(msgType, { app });
   } catch (err) {
+    await removeApplicationDocuments(uploadedPaths);
     showFormError(`Save failed: ${err.message}`);
     btnSave.disabled = false;
-    btnSave.textContent = editingId ? 'Save changes' : 'Save role';
+    btnSave.textContent = applicationId ? 'Save changes' : 'Save role';
     return;
   }
 
   if (!res || res.error || res.ok === false) {
+    await removeApplicationDocuments(uploadedPaths);
     showFormError(`Save failed: ${res?.error || 'unknown error'}`);
     btnSave.disabled = false;
-    btnSave.textContent = editingId ? 'Save changes' : 'Save role';
+    btnSave.textContent = applicationId ? 'Save changes' : 'Save role';
     return;
   }
 
   if (res.dupe) {
+    await removeApplicationDocuments(uploadedPaths);
     justSaved = asNoticeApp(res.dupe);
     lastAction = 'duplicate';
     closeForm();

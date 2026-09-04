@@ -1,18 +1,37 @@
 import { APP_URL } from '../../config.js';
 import { getAccessToken } from '../auth/session.js';
+import { fetchWithNetworkError } from '../network.js';
+
+const API_ORIGIN = APP_URL.replace(/\/+$/, '');
+
+function connectionHint() {
+  try {
+    const { hostname } = new URL(API_ORIGIN);
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') {
+      return 'Start the JobMaxxing web app with "npm run dev", then try again.';
+    }
+  } catch {
+    // The configured URL is reported by fetchWithNetworkError below.
+  }
+  return 'Check your connection and APP_URL in config.js, then try again.';
+}
 
 async function apiFetch(path, options = {}) {
   const token = await getAccessToken();
   if (!token) throw new Error('Authentication is required.');
 
-  const response = await fetch(`${APP_URL}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
+  const response = await fetchWithNetworkError(
+    `${API_ORIGIN}${path}`,
+    {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(options.headers ?? {}),
+      },
     },
-  });
+    { service: 'the JobMaxxing API', hint: connectionHint() },
+  );
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -69,11 +88,11 @@ export async function analyzeApplication(applicationId, sourceText) {
 
 export function applicationUrl(id, view = "overview") {
   const viewParam = view && view !== "overview" ? `&view=${view}` : "";
-  return `${APP_URL}/applications?id=${id}${viewParam}`;
+  return `${API_ORIGIN}/applications?id=${id}${viewParam}`;
 }
 
 export function openJobMaxxing(path = '/applications') {
-  return chrome.tabs.create({ url: `${APP_URL}${path}` });
+  return chrome.tabs.create({ url: `${API_ORIGIN}${path}` });
 }
 
 export function openApplication(id) {

@@ -33,8 +33,10 @@ export function fromTrackApp(app) {
     status,
     jobDescription: app.description?.trim() || null,
     notes,
+    referralContact: app.referralContact?.trim() || null,
     sourceHost: app.sourceHost || null,
     recruitingSeason: app.season || null,
+    ...(app.submittedFiles ? { submittedFiles: app.submittedFiles } : {}),
   };
 }
 
@@ -52,10 +54,13 @@ export function toTrackApp(apiApp) {
     status: fromApiStatus(apiApp.status, apiApp.notes),
     description: apiApp.jobDescription || '',
     notes,
+    referralContact: apiApp.referralContact || '',
     sourceHost: apiApp.sourceHost || '',
     season: apiApp.recruitingSeason || null,
     descriptionHash: apiApp.descriptionHash || null,
     jobUrl: apiApp.jobUrl || null,
+    submittedResumeVersionId: apiApp.submittedResumeVersionId || null,
+    submittedCoverLetterId: apiApp.submittedCoverLetterId || null,
     createdAt: apiApp.createdAt,
     updatedAt: apiApp.updatedAt,
   };

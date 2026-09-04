@@ -32,13 +32,13 @@
       </header>
 
       <main id="home">
-        <button id="btn-grab" class="action-primary" type="button" title="Capture the job posting on the current tab">
+        <button id="btn-grab" class="action-primary" type="button" title="Checking whether this tab is a job posting" aria-busy="false" disabled>
           <span class="action-primary-icon" id="grab-icon">
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3.5A1.5 1.5 0 015.5 2h5.086a1.5 1.5 0 011.06.44l3.914 3.914A1.5 1.5 0 0116 7.414V16.5A1.5 1.5 0 0114.5 18h-9A1.5 1.5 0 014 16.5v-13zM10.5 3H5.5a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V8h-3.5A1.5 1.5 0 0110.5 6.5V3zm1 0v3.5a.5.5 0 00.5.5H15.5L11.5 3zM7 11.25a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 017 11.25zm.75 2.5a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5z"/></svg>
           </span>
           <span class="action-primary-text">
-            <span class="action-primary-title" id="grab-title">Grab this page</span>
-            <span class="action-primary-sub" id="grab-sub">Capture the posting on this tab</span>
+            <span class="action-primary-title" id="grab-title">Checking this page…</span>
+            <span class="action-primary-sub" id="grab-sub">Grab works only on individual job postings</span>
           </span>
           <span class="action-primary-chevron" aria-hidden="true">
             <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L11.586 10 7.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
@@ -86,8 +86,8 @@
         </div>
         <div class="form-body">
           <input type="hidden" id="f-id">
-          <div class="compose-line"><label for="f-company">To</label><input id="f-company" type="text" placeholder="Company name" autocomplete="organization" required></div>
-          <div class="compose-line subject"><label for="f-title">Subject</label><input id="f-title" type="text" placeholder="Role title" required></div>
+          <div class="compose-line"><label for="f-company">Company</label><input id="f-company" type="text" placeholder="Company name" autocomplete="organization" required></div>
+          <div class="compose-line subject"><label for="f-title">Role</label><input id="f-title" type="text" placeholder="Role title" required></div>
           <div class="field"><label for="f-location">Location</label><input id="f-location" type="text" placeholder="Remote / NYC"></div>
           <div class="field row">
             <div><label for="f-date">Applied date</label><input id="f-date" type="date"></div>
@@ -109,6 +109,22 @@
             <div><label for="f-next">Next action</label><input id="f-next" type="text" placeholder="Follow up, OA, prep"></div>
           </div>
           <div class="field"><label for="f-url">Job URL</label><input id="f-url" type="url" placeholder="https://company.com/careers/role"></div>
+          <div class="field"><label for="f-referral">Referral contact</label><input id="f-referral" type="text" placeholder="Name, email, or relationship"></div>
+          <section class="package-fields" aria-labelledby="package-heading">
+            <div class="package-heading">
+              <div><h3 id="package-heading">Application package</h3><p>PDF or DOCX, up to 10 MB each. Saved files become locked submitted copies.</p></div>
+            </div>
+            <div class="package-file">
+              <label for="f-resume">Resume used</label>
+              <input id="f-resume" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+              <div class="package-file-state"><span id="f-resume-meta">No file selected</span><button id="btn-remove-resume" class="btn-link package-remove" type="button" hidden>Remove</button></div>
+            </div>
+            <div class="package-file">
+              <label for="f-cover-letter">Cover letter used</label>
+              <input id="f-cover-letter" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+              <div class="package-file-state"><span id="f-cover-letter-meta">No file selected</span><button id="btn-remove-cover-letter" class="btn-link package-remove" type="button" hidden>Remove</button></div>
+            </div>
+          </section>
           <div class="field"><label for="f-desc">Job description</label><textarea id="f-desc" rows="6" placeholder="Paste the job description…"></textarea></div>
           <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" rows="3" placeholder="Recruiter name, referral, etc."></textarea></div>
           <div id="f-dupe" class="dupe-warning" style="display:none">This looks like a duplicate of an existing application.</div>

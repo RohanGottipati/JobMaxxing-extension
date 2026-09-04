@@ -1,4 +1,5 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config.js';
+import { fetchWithNetworkError, isNetworkUnavailableError } from '../network.js';
 
 const SESSION_KEY = 'jobmaxxing.session';
 const DISPLAY_KEY = 'jobmaxxing.sessionDisplay';
@@ -9,6 +10,13 @@ function authHeaders(token) {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+}
+
+function authFetch(path, options) {
+  return fetchWithNetworkError(`${SUPABASE_URL}${path}`, options, {
+    service: 'Supabase Auth',
+    hint: 'Check your connection and SUPABASE_URL in config.js, then try again.',
+  });
 }
 
 async function storeSession(session) {
@@ -63,7 +71,7 @@ function isExpired(session) {
 }
 
 async function refreshSession(session) {
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+  const response = await authFetch('/auth/v1/token?grant_type=refresh_token', {
     method: 'POST',
     headers: authHeaders(SUPABASE_ANON_KEY),
     body: JSON.stringify({ refresh_token: session.refresh_token }),
@@ -87,14 +95,26 @@ export async function getAccessToken() {
   try {
     const refreshed = await refreshSession(session);
     return refreshed.access_token;
-  } catch {
+  } catch (error) {
+    // Losing connectivity does not invalidate the refresh token. Keep the
+    // stored session so a later request can retry instead of signing the user
+    // out because of a transient network failure.
+    if (isNetworkUnavailableError(error)) throw error;
     await signOut();
     return null;
   }
 }
 
+export async function getAuthenticatedSession() {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return null;
+  const session = await getStoredSession();
+  const userId = session?.user?.id;
+  return userId ? { accessToken, userId } : null;
+}
+
 export async function signIn(email, password) {
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+  const response = await authFetch('/auth/v1/token?grant_type=password', {
     method: 'POST',
     headers: authHeaders(SUPABASE_ANON_KEY),
     body: JSON.stringify({ email, password }),
@@ -116,7 +136,7 @@ export async function signIn(email, password) {
 export async function signOut() {
   const session = await getStoredSession();
   if (session?.access_token) {
-    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+    await authFetch('/auth/v1/logout', {
       method: 'POST',
       headers: authHeaders(session.access_token),
     }).catch(() => {});
@@ -127,7 +147,7 @@ export async function signOut() {
 export async function getCurrentUser() {
   const token = await getAccessToken();
   if (!token) return null;
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+  const response = await authFetch('/auth/v1/user', {
     headers: authHeaders(token),
   });
   if (!response.ok) {
@@ -173,9 +193,13 @@ export async function getSessionDisplay({ refresh = true } = {}) {
   if (!fullName) {
     try {
       const token = await getAccessToken();
-      const response = await fetch(
+      const response = await fetchWithNetworkError(
         `${SUPABASE_URL}/rest/v1/profiles?select=full_name&id=eq.${user.id}`,
         { headers: { ...authHeaders(token), Accept: 'application/json' } },
+        {
+          service: 'Supabase',
+          hint: 'Check your connection and SUPABASE_URL in config.js, then try again.',
+        },
       );
       if (response.ok) {
         const rows = await response.json();
