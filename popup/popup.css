@@ -178,6 +178,7 @@ label:focus-within {
 .action-primary:active:not(:disabled) { transform: translateY(1px); }
 .action-primary:disabled { cursor: not-allowed; opacity: 0.72; transform: none; }
 .action-primary[aria-busy="true"]:disabled { cursor: progress; opacity: 0.82; }
+.action-primary[hidden] { display: none !important; }
 .action-primary-icon {
   display: flex;
   align-items: center;

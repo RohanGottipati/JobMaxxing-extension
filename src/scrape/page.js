@@ -52,6 +52,19 @@ export function detectJobPostingPage() {
   }
 
   const pageTitle = normalizedText(document.querySelector('h1')).toLowerCase();
+  const nextDataScript = document.getElementById('__NEXT_DATA__');
+  if (nextDataScript) {
+    try {
+      const nextData = JSON.parse(nextDataScript.textContent || '');
+      const jobData = nextData?.props?.pageProps?.jobData;
+      if (jobData?.jobTitle || jobData?.jobPostingId) {
+        return { isJobPosting: true, signal: 'next-job-data', jobUrl: location.href };
+      }
+    } catch {
+      // Ignore malformed and unrelated Next data blocks.
+    }
+  }
+
   const structuredPostings = [];
   for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
     try {
@@ -106,6 +119,26 @@ export function detectJobPostingPage() {
         hasHeading &&
         substantialText('[class*="descriptionText"], [class*="jobDescription"]'),
     },
+    {
+      host: 'dayforcehcm.com',
+      matches:
+        /\/jobs\/\d+/i.test(path) ||
+        Boolean(
+          document.querySelector(
+            '[test-id="job-details-dayforce-jobs"], [test-id="job-detail-title"], [test-id="apply-button"]',
+          ),
+        ),
+    },
+    {
+      host: 'dayforce.com',
+      matches:
+        /\/jobs\/\d+/i.test(path) ||
+        Boolean(
+          document.querySelector(
+            '[test-id="job-details-dayforce-jobs"], [test-id="job-detail-title"], [test-id="apply-button"]',
+          ),
+        ),
+    },
   ];
   if (
     rules.some(
@@ -128,6 +161,8 @@ export function detectJobPostingPage() {
     '[class*="job-description" i]',
     '[class*="jobDescription"]',
     '[class*="job_description"]',
+    '[test-id="job-detail-body"]',
+    '[test-id="job-detail-header"]',
   ].join(',');
   const jobPath = /\/(?:jobs?|careers?|positions?|openings?|vacancies?|opportunities?)\/[^/?#]+/i.test(
     location.pathname,
@@ -238,7 +273,8 @@ export function scrapePage() {
       output += next;
     };
     const walk = (node, listDepth = 0, preserveWhitespace = false) => {
-      node.childNodes.forEach((child) => {
+      const children = node.childNodes ? [...node.childNodes] : [...(node.children || [])];
+      children.forEach((child) => {
         if (child.nodeType === 3) {
           appendText(child.textContent, preserveWhitespace);
           return;
@@ -331,13 +367,13 @@ export function scrapePage() {
       .trim();
     if (!candidate || candidate.length > 160) return '';
     if (
-      /^(?:company|employer|careers?|jobs?|job board|careers? home|jobs? home|job search|search jobs?|search careers?|career opportunities|view (?:all )?jobs?)$/i.test(candidate)
+      /^(?:company|employer|careers?|jobs?|job board|careers? home|jobs? home|job search|search jobs?|search careers?|career opportunities|view (?:all )?jobs?|job details?|job postings?|job vacanc(?:y|ies)|career details?)$/i.test(candidate)
     ) {
       return '';
     }
     if (
       !allowPlatformName &&
-      /^(?:linkedin(?: jobs)?|workday|greenhouse|lever|ashby)(?: recruiting)?$/i.test(candidate)
+      /^(?:linkedin(?: jobs)?|workday|greenhouse|lever|ashby|dayforce(?: hcm| jobs)?)(?: recruiting)?$/i.test(candidate)
     ) {
       return '';
     }
@@ -406,6 +442,17 @@ export function scrapePage() {
     if (host === 'myworkdayjobs.com' || host.endsWith('.myworkdayjobs.com')) {
       const account = host.split('.')[0]?.replace(/\.wd\d*$/i, '');
       return humanizeCompanySlug(account);
+    }
+    if (
+      host === 'dayforcehcm.com' ||
+      host.endsWith('.dayforcehcm.com') ||
+      host === 'dayforce.com' ||
+      host.endsWith('.dayforce.com')
+    ) {
+      const match = location.pathname.match(
+        /(?:\/[a-z]{2}(?:-[a-z]{2,4})?)?\/([^/]+)\/candidateportal/i,
+      );
+      if (match) return humanizeCompanySlug(match[1]);
     }
     return '';
   }
@@ -672,7 +719,85 @@ export function scrapePage() {
           document.querySelector('[class*="jobDescription"]'),
       ),
     }),
+    'dayforcehcm.com': () => scrapeDayforce(),
+    'dayforce.com': () => scrapeDayforce(),
   };
+
+  function scrapeDayforce() {
+    let nextData = null;
+    try {
+      const script = document.getElementById('__NEXT_DATA__');
+      if (script) nextData = JSON.parse(script.textContent || '');
+    } catch {
+      // Ignore JSON parse errors
+    }
+
+    const pageProps = nextData?.props?.pageProps;
+    const jobData = pageProps?.jobData;
+    const queries = pageProps?.dehydratedState?.queries || [];
+    const siteInfo = queries.find(
+      (q) => Array.isArray(q?.queryKey) && q.queryKey[0] === 'site-info',
+    )?.state?.data;
+
+    const title =
+      text(document.querySelector('[test-id="job-detail-title"]')) ||
+      jobData?.jobTitle ||
+      text(document.querySelector('h1'));
+
+    const company =
+      siteInfo?.candidateCorrespondenceClientName ||
+      document.querySelector('[test-id="header-logo"] img')?.getAttribute('alt') ||
+      '';
+
+    const locations = (jobData?.postingLocations || [])
+      .map((loc) =>
+        loc.formattedAddress ||
+        [loc.cityName, loc.stateCode, loc.isoCountryCode].filter(Boolean).join(', '),
+      )
+      .filter(Boolean)
+      .join('; ');
+
+    const location =
+      locations ||
+      text(
+        document.querySelector('[test-id="job-detail-location-list"]') ||
+          document.querySelector('[test-id="job-detail-location-name"]'),
+      );
+
+    const domDesc = [
+      document.querySelector('[test-id="job-detail-header"]'),
+      document.querySelector('[test-id="job-detail-body"]'),
+      document.querySelector('[test-id="job-detail-footer"]'),
+    ]
+      .map(extractFormatted)
+      .filter(Boolean)
+      .join('\n\n');
+
+    const dataDesc = jobData?.jobPostingContent
+      ? (typeof jobData.jobPostingContent === 'string'
+          ? htmlDescription(jobData.jobPostingContent)
+          : htmlDescription(
+              [
+                jobData.jobPostingContent.jobDescriptionHeader,
+                jobData.jobPostingContent.jobDescription,
+                jobData.jobPostingContent.jobDescriptionFooter,
+              ]
+                .filter(Boolean)
+                .join('\n\n'),
+            ))
+      : '';
+
+    const description = domDesc || dataDesc;
+    const deadline = dateValue(jobData?.postingExpiryTimestampUTC);
+
+    return {
+      title,
+      company,
+      location,
+      description,
+      deadline,
+    };
+  }
 
   function adapterData() {
     const host = location.hostname.toLowerCase();
@@ -696,6 +821,8 @@ export function scrapePage() {
       '[class*="job-description" i]',
       '[class*="jobDescription"]',
       '[class*="job_description"]',
+      '[test-id="job-detail-body"]',
+      '[test-id="job-detail-header"]',
     ];
     const candidates = [...new Set(selectors.flatMap((selector) => [
       ...document.querySelectorAll(selector),
@@ -769,9 +896,33 @@ export function scrapePage() {
     const reverse = String(value || '').match(/\b(20\d{2})\s+(winter|spring|summer|fall|autumn)\b/i);
     const season = direct?.[1] || reverse?.[2];
     const year = direct?.[2] || reverse?.[1];
-    if (!season || !year) return '';
-    const normalized = season.toLowerCase() === 'autumn' ? 'Fall' : `${season[0].toUpperCase()}${season.slice(1).toLowerCase()}`;
-    return `${normalized} ${year}`;
+    if (season && year) {
+      const normalized = season.toLowerCase() === 'autumn' ? 'Fall' : `${season[0].toUpperCase()}${season.slice(1).toLowerCase()}`;
+      return `${normalized} ${year}`;
+    }
+    const monthRange = String(value || '').match(
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(?:to|-)\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})\b/i,
+    );
+    if (monthRange) {
+      const startMonth = monthRange[1].toLowerCase();
+      const endMonth = monthRange[2].toLowerCase();
+      const rangeYear = monthRange[3];
+      if (/^(may|june|july)$/.test(startMonth) && /^(august|september)$/.test(endMonth)) {
+        return `Summer ${rangeYear}`;
+      }
+      if (/^(january|february)$/.test(startMonth) && /^(april|may)$/.test(endMonth)) {
+        return `Winter ${rangeYear}`;
+      }
+      if (/^(september|october)$/.test(startMonth) && /^(december)$/.test(endMonth)) {
+        return `Fall ${rangeYear}`;
+      }
+    }
+    const internYear = String(value || '').match(/\b(20\d{2})\s+intern(?:ship)?\b/i) ||
+      String(value || '').match(/\bintern(?:ship)?\s+(?:cohort\s+)?(20\d{2})\b/i);
+    if (internYear) {
+      return `Summer ${internYear[1]}`;
+    }
+    return '';
   }
 
   const structured = structuredData();
@@ -804,7 +955,7 @@ export function scrapePage() {
     company: normalizeText(company).slice(0, 200),
     location: normalizeText(locationText).slice(0, 200),
     description: truncateAtBoundary(description, 200_000),
-    deadline: structured.deadline || '',
+    deadline: structured.deadline || adapter.deadline || '',
     recruitingSeason: recruitingSeason(`${title}\n${description}`),
     sourceHost: location.hostname,
     jobUrl: location.href,

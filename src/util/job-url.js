@@ -4,6 +4,21 @@ export function canonicalJobUrl(url) {
     const parsed = new URL(url);
     const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
     const path = (parsed.pathname.replace(/\/+$/, '') || '/').toLowerCase();
+
+    if (
+      host === 'dayforcehcm.com' ||
+      host.endsWith('.dayforcehcm.com') ||
+      host === 'dayforce.com' ||
+      host.endsWith('.dayforce.com')
+    ) {
+      const dayforceMatch = path.match(
+        /(?:\/[a-z]{2}(?:-[a-z]{2,4})?)?\/([^/]+)\/candidateportal\/jobs\/(\d+)/i,
+      );
+      if (dayforceMatch) {
+        return `${host}/${dayforceMatch[1]}?job=${dayforceMatch[2]}`;
+      }
+    }
+
     const jobId =
       parsed.searchParams.get('currentJobId') ||
       parsed.searchParams.get('jk') ||

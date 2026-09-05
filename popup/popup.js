@@ -131,20 +131,25 @@ async function hydrateHome() {
   const cached = await getCachedIndex();
   if (cached) {
     applyIndex(cached);
-    await detectPageMatch();
-    renderNotice();
     renderRecent();
   }
-  await updateGrabHint();
+  await refreshActiveTab();
 }
 
-async function detectPageMatch() {
+async function refreshActiveTab() {
+  let tab;
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    pageMatch = asNoticeApp(findByJobUrl(indexCache, tab?.url));
+    [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   } catch {
-    pageMatch = null;
+    tab = null;
   }
+  detectPageMatch(tab);
+  renderNotice();
+  await updateGrabHint(tab);
+}
+
+function detectPageMatch(tab) {
+  pageMatch = asNoticeApp(findByJobUrl(indexCache, tab?.url));
 }
 
 function renderNotice() {
@@ -192,11 +197,8 @@ function renderRecent() {
 
 async function refreshHome() {
   await loadIndex();
-  await detectPageMatch();
-  renderNotice();
+  await refreshActiveTab();
   renderRecent();
-  if (grabHintResolved) syncResolvedGrabHint();
-  else await updateGrabHint();
 }
 
 document.addEventListener('keydown', (e) => {
@@ -234,8 +236,9 @@ function syncResolvedGrabHint() {
   grabSub.textContent = grabError || 'Capture the role and job description';
 }
 
-async function updateGrabHint() {
+async function updateGrabHint(tab) {
   if (btnGrab.getAttribute('aria-busy') === 'true') return;
+  btnGrab.hidden = false;
   const request = ++grabHintRequest;
   grabEligibility = { ok: false, code: null, message: '' };
   btnGrab.disabled = true;
@@ -245,7 +248,6 @@ async function updateGrabHint() {
     grabSub.textContent = 'Grab works only on individual job postings';
   }
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (request !== grabHintRequest) return;
     grabEligibility = captureEligibility(tab?.url);
     if (!grabEligibility.ok) {
@@ -321,7 +323,7 @@ btnGrab.addEventListener('click', async () => {
   grabEligibility = captureEligibility(tab.url);
   if (!grabEligibility.ok) {
     grabError = null;
-    await updateGrabHint();
+    await refreshActiveTab();
     return;
   }
   grabError = null;
@@ -357,7 +359,7 @@ btnGrab.addEventListener('click', async () => {
     grabError = error instanceof Error ? error.message : 'Could not capture this page.';
   } finally {
     setGrabBusy(false);
-    await updateGrabHint();
+    await refreshActiveTab();
   }
 });
 

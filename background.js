@@ -1,7 +1,5 @@
 import { MSG } from './src/messages.js';
-import {
-  analyzeApplication,
-} from './src/api/jobmaxxing.js';
+import { analyzeApplication } from './src/api/jobmaxxing.js';
 import { getCurrentUser, getInstantSession, getSessionDisplay, signIn, signOut } from './src/auth/session.js';
 import {
   installWebSessionSync,
@@ -62,7 +60,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       } else {
         console.error('[jobmaxxing] message error:', err);
       }
-      respond(sendResponse, { error: err instanceof Error ? err.message : String(err) });
+      respond(sendResponse, {
+        error: err instanceof Error ? err.message : String(err),
+        code: err?.payload?.error?.code ?? err?.code ?? null,
+        status: err?.status ?? null,
+        documentPath: err?.payload?.error?.documentPath ?? null,
+      });
     });
   return true;
 });

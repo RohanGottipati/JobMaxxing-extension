@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JobMaxxing: Job Application Tracker",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "minimum_chrome_version": "114",
   "description": "Capture job postings, track application status, and save the resume and cover letter you submitted.",
   "permissions": ["storage", "activeTab", "scripting", "alarms", "tabs", "cookies", "sidePanel"],
@@ -11,9 +11,12 @@
     "*://*.greenhouse.io/*",
     "*://*.lever.co/*",
     "*://*.ashbyhq.com/*",
+    "*://*.dayforcehcm.com/*",
+    "*://*.dayforce.com/*",
     "https://*.supabase.co/*",
     "http://localhost:3000/*",
-    "https://jobmaxxing.app/*"
+    "https://job-maxxing.vercel.app/*",
+    "https://jobmaxxing-sooty.vercel.app/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -38,7 +41,9 @@
         "*://*.myworkdayjobs.com/*",
         "*://*.greenhouse.io/*",
         "*://*.lever.co/*",
-        "*://*.ashbyhq.com/*"
+        "*://*.ashbyhq.com/*",
+        "*://*.dayforcehcm.com/*",
+        "*://*.dayforce.com/*"
       ],
       "js": ["content/content.js"],
       "run_at": "document_idle"

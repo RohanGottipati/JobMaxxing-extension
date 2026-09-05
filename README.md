@@ -8,7 +8,7 @@ Current release source: **1.2.1**, Manifest V3, Chrome 114 or newer. The reposit
 
 ## What it does
 
-- Detects individual job pages on LinkedIn, Workday, Greenhouse, Lever and Ashby
+- Detects individual job pages on LinkedIn, Workday, Greenhouse, Lever, Ashby and Dayforce HCM
 - Captures company, role, location, job URL, description, deadline and recruiting season when available
 - Can recognize other pages with `JobPosting` structured data after the user opens the extension for that tab
 - Supports manual entry when a page cannot be confirmed or extracted
@@ -54,11 +54,11 @@ Never place a Supabase secret/service-role key or Gemini key in the extension. F
 4. Save the application.
 5. Use **Open in JobMaxxing** to edit details, run a career match or manage the saved documents.
 
-If the current page is already tracked, the popup offers to update or open the existing application instead of silently creating another copy.
+If the current page is already tracked, the side panel offers to update or open the existing application instead of silently creating another copy.
 
 ## Capture behavior
 
-The five built-in job-board host patterns run a small detector that sets the extension badge when the current page looks like an individual posting. The full company, role and description snapshot is collected only after the user selects **Grab this posting**. A manual **Add application** action is available without scraping the page.
+The built-in job-board host patterns run a small detector that sets the extension badge when the current page looks like an individual posting. The full company, role and description snapshot is collected only after the user selects **Grab this posting**. A manual **Add application** action is available without scraping the page.
 
 The extension uses the web app's eight statuses: Saved, Applied, Online Assessment, Interview, Final Round, Offer, Rejected and Withdrawn. Moving a Saved role forward sets the applied date when one is not already present.
 
@@ -69,7 +69,7 @@ The extension uses the web app's eight statuses: Saved, Applied, Online Assessme
 - `tabs` reads the active tab, opens JobMaxxing and clears badge state when navigation starts.
 - `cookies` mirrors the Supabase session between the extension and the configured JobMaxxing origin.
 - `sidePanel` hosts the persistent interface; `alarms` supports previously configured local follow-up reminders.
-- Host permissions are limited to the five supported job-board families, the configured Supabase project pattern, local development and the intended JobMaxxing app origin. The manifest no longer requests optional access to every website.
+- Host permissions are limited to supported job-board families (LinkedIn, Workday, Greenhouse, Lever, Ashby, Dayforce HCM), the configured Supabase project pattern, local development and the intended JobMaxxing app origin. The manifest no longer requests optional access to every website.
 
 See [Privacy and data handling](docs/PRIVACY.md) for the exact local and remote data flow.
 
