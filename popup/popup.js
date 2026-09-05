@@ -12,10 +12,10 @@ import { getCachedIndex } from '../src/storage.js';
 import { STATUS_LABEL } from '../src/status-map.js';
 import { todayLocalDate } from '../src/util/date.js';
 import { defaultMergedPdfName } from '../src/util/pdf-name.js';
+import { recruitingSeasons } from '../src/util/recruiting-seasons.js';
 import { findByJobUrl } from '../src/util/job-url.js';
 import { captureEligibility } from '../src/util/tab-url.js';
 
-const SEASONS = ['Summer 2027', 'Winter 2027'];
 let editingId = null;
 let scrapedJobUrl = null;
 let scrapedSourceHost = null;
@@ -74,7 +74,9 @@ const btnApplyMatch = document.getElementById('btn-apply-match');
 const recentEl = document.getElementById('recent');
 const recentList = document.getElementById('recent-list');
 
-SEASONS.forEach((s) => fSeason.appendChild(new Option(s, s)));
+recruitingSeasons().forEach((season) =>
+  fSeason.appendChild(new Option(season, season)),
+);
 
 function dateInputValue(value) {
   return String(value || '').slice(0, 10);

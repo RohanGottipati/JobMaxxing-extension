@@ -1,4 +1,4 @@
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config.js';
+import * as extensionConfig from '../../config.js';
 import { getAuthenticatedSession } from '../auth/session.js';
 import {
   applicationPackagePath,
@@ -8,6 +8,9 @@ import {
 import { fetchWithNetworkError } from '../network.js';
 
 const DOCUMENT_BUCKET = 'job-documents';
+const SUPABASE_PUBLIC_KEY =
+  extensionConfig.SUPABASE_PUBLISHABLE_KEY || extensionConfig.SUPABASE_ANON_KEY;
+const { SUPABASE_URL } = extensionConfig;
 const STORAGE_ORIGIN = SUPABASE_URL.replace(/\/+$/, '');
 
 function storageUrl(path = '') {
@@ -37,7 +40,7 @@ export async function uploadApplicationDocument(file, { fetchImpl = globalThis.f
     {
       method: 'POST',
       headers: {
-        apikey: SUPABASE_ANON_KEY,
+        apikey: SUPABASE_PUBLIC_KEY,
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': contentType,
         'cache-control': 'max-age=3600',
@@ -72,7 +75,7 @@ export async function removeApplicationDocuments(paths, { fetchImpl = globalThis
     {
       method: 'DELETE',
       headers: {
-        apikey: SUPABASE_ANON_KEY,
+        apikey: SUPABASE_PUBLIC_KEY,
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },

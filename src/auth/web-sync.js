@@ -84,11 +84,19 @@ function decodeSession(raw) {
   };
 }
 
-// Origins where the website may be running. Includes the configured APP_URL plus
-// the standard local-dev and deployed origins, so the extension syncs whether you
-// are logged in on localhost or on the deployed site.
+function origin(value) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+// Origins where the website may be running. The production origin comes only
+// from config.js so a development placeholder cannot silently become a cookie
+// target in a packaged release.
 const WEB_ORIGINS = Array.from(
-  new Set([APP_URL, 'http://localhost:3000', 'https://jobmaxxing.app'].filter(Boolean)),
+  new Set([origin(APP_URL), 'http://localhost:3000'].filter(Boolean)),
 );
 
 // Read and decode the website's Supabase session from its cookies, or null.

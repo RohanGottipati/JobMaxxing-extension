@@ -1,26 +1,24 @@
 import { toApiStatus } from './status-map.js';
 
 export function fromApiStatus(status, notes = '') {
-  if (status === 'online_assessment') return 'oa';
-  if (status === 'withdrawn' && String(notes).startsWith('[ghosted]')) return 'ghosted';
-  if (status === 'final_round') return 'interview';
-  if (status === 'saved') return 'saved';
-  const map = {
-    applied: 'applied',
-    interview: 'interview',
-    offer: 'offer',
-    rejected: 'rejected',
-    withdrawn: 'ghosted',
-  };
-  return map[status] ?? 'applied';
+  void notes;
+  return [
+    'saved',
+    'applied',
+    'online_assessment',
+    'interview',
+    'final_round',
+    'offer',
+    'rejected',
+    'withdrawn',
+  ].includes(status)
+    ? status
+    : 'applied';
 }
 
 export function fromTrackApp(app) {
-  let notes = app.notes?.trim() || null;
+  const notes = app.notes?.trim() || null;
   const status = toApiStatus(app.status || 'applied');
-  if (app.status === 'ghosted' && notes && !notes.startsWith('[ghosted]')) {
-    notes = `[ghosted] ${notes}`;
-  }
   return {
     id: app.id || undefined,
     companyName: app.company?.trim(),

@@ -1,6 +1,9 @@
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config.js';
+import * as extensionConfig from '../../config.js';
 import { fetchWithNetworkError, isNetworkUnavailableError } from '../network.js';
 
+const SUPABASE_PUBLIC_KEY =
+  extensionConfig.SUPABASE_PUBLISHABLE_KEY || extensionConfig.SUPABASE_ANON_KEY;
+const { SUPABASE_URL } = extensionConfig;
 const SESSION_KEY = 'jobmaxxing.session';
 const DISPLAY_KEY = 'jobmaxxing.sessionDisplay';
 // Tracks where the current session came from: 'web' (mirrored from the website)
@@ -10,7 +13,7 @@ const SOURCE_KEY = 'jobmaxxing.sessionSource';
 
 function authHeaders(token) {
   return {
-    apikey: SUPABASE_ANON_KEY,
+    apikey: SUPABASE_PUBLIC_KEY,
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
@@ -120,7 +123,7 @@ function isExpired(session) {
 async function refreshSession(session) {
   const response = await authFetch('/auth/v1/token?grant_type=refresh_token', {
     method: 'POST',
-    headers: authHeaders(SUPABASE_ANON_KEY),
+    headers: authHeaders(SUPABASE_PUBLIC_KEY),
     body: JSON.stringify({ refresh_token: session.refresh_token }),
   });
   if (!response.ok) throw new Error('Session expired. Sign in again.');
@@ -163,7 +166,7 @@ export async function getAuthenticatedSession() {
 export async function signIn(email, password) {
   const response = await authFetch('/auth/v1/token?grant_type=password', {
     method: 'POST',
-    headers: authHeaders(SUPABASE_ANON_KEY),
+    headers: authHeaders(SUPABASE_PUBLIC_KEY),
     body: JSON.stringify({ email, password }),
   });
   const data = await response.json().catch(() => ({}));

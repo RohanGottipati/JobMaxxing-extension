@@ -10,9 +10,10 @@ import {
   safeDocumentFileName,
   validateDocumentFile,
 } from './document-policy.js';
-import { fromTrackApp, toTrackApp } from './mapping.js';
+import { fromApiStatus, fromTrackApp, toTrackApp } from './mapping.js';
 import { todayLocalDate } from './util/date.js';
 import { defaultMergedPdfName } from './util/pdf-name.js';
+import { recruitingSeasons } from './util/recruiting-seasons.js';
 import {
   captureEligibility,
   injectionFailure,
@@ -64,6 +65,15 @@ test('defaults merged PDFs to the signed-in first and last name', () => {
     'Rohan_Gottipati_Application.pdf',
   );
   assert.equal(defaultMergedPdfName(), 'Application.pdf');
+});
+
+test('builds recruiting terms from the current date instead of a fixed year', () => {
+  assert.deepEqual(recruitingSeasons(new Date(2026, 8, 4), 4), [
+    'Fall 2026',
+    'Winter 2027',
+    'Summer 2027',
+    'Fall 2027',
+  ]);
 });
 
 test('classifies scriptable tabs and expected Chrome injection failures', () => {
@@ -119,4 +129,23 @@ test('round-trips referral and submitted package identifiers through API mapping
   assert.equal(application.referralContact, 'Taylor');
   assert.equal(application.submittedResumeVersionId, 'resume-version-id');
   assert.equal(application.submittedCoverLetterId, 'cover-letter-id');
+});
+
+test('uses the same status vocabulary as the web application', () => {
+  for (const status of [
+    'saved',
+    'applied',
+    'online_assessment',
+    'interview',
+    'final_round',
+    'offer',
+    'rejected',
+    'withdrawn',
+  ]) {
+    assert.equal(fromApiStatus(status), status);
+    assert.equal(fromTrackApp({ status }).status, status);
+  }
+
+  assert.equal(fromTrackApp({ status: 'oa' }).status, 'online_assessment');
+  assert.equal(fromTrackApp({ status: 'ghosted' }).status, 'withdrawn');
 });
