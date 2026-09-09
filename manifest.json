@@ -15,7 +15,6 @@
     "*://*.dayforce.com/*",
     "https://*.supabase.co/*",
     "http://localhost:3000/*",
-    "https://jobmaxxing.app/*",
     "https://job-maxxing.vercel.app/*",
     "https://jobmaxxing-sooty.vercel.app/*"
   ],
