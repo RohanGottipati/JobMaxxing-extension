@@ -7,6 +7,18 @@ Web side of the same workflow: [`../web/LOCAL_TESTING.md`](../web/LOCAL_TESTING.
 
 ---
 
+## Local vs. committed (GitHub) configuration
+
+The committed code targets the **deployed** app: `config.example.js` defaults
+`APP_URL` to `https://jobmaxxing.app` and `manifest.json` `host_permissions`
+includes `https://jobmaxxing.app/*`. Your **local** `config.js` (gitignored) is
+where you point the extension at the local web app for testing.
+
+| Where | `APP_URL` | Connects the extension to |
+|-------|-----------|---------------------------|
+| Local working copy — `config.js` (gitignored) | `http://localhost:3000` | the local web app |
+| GitHub / committed — `config.example.js`, manifest | `https://jobmaxxing.app` | the deployed app |
+
 ## TL;DR — the one thing that toggles
 
 | File | Local value | Deployed value |
@@ -14,7 +26,7 @@ Web side of the same workflow: [`../web/LOCAL_TESTING.md`](../web/LOCAL_TESTING.
 | `extension/config.js` → `APP_URL` | `http://localhost:3000` | `https://jobmaxxing.app` |
 
 ```js
-// config.js
+// config.js  (gitignored; set this to localhost for local testing)
 // Deployed:  'https://jobmaxxing.app'
 // Local dev: 'http://localhost:3000'
 export const APP_URL = 'http://localhost:3000';
@@ -75,9 +87,10 @@ npm test    # node --test src/*.test.js
 
 ## 3. What does NOT need toggling
 
-- **`manifest.json` host permissions** are committed and already list
-  `http://localhost:3000/*` plus the Vercel origins, so local dev works without
-  edits. See the caveat in §4 about the `jobmaxxing.app` origin.
+- **`manifest.json` host permissions** are committed and list both
+  `http://localhost:3000/*` and `https://jobmaxxing.app/*` (plus the Vercel
+  origins), so both local dev and the deployed app work without edits — only
+  `config.js` `APP_URL` decides which one the extension actually targets.
 
 ---
 
@@ -89,10 +102,10 @@ npm test    # node --test src/*.test.js
 - [ ] `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` = the production project's
       public values.
 - [ ] **`manifest.json` `host_permissions` includes the exact `APP_URL` origin.**
-      ⚠️ It currently lists `job-maxxing.vercel.app` and `jobmaxxing-sooty.vercel.app`
-      but **not** `https://jobmaxxing.app/*`. If you ship with
-      `APP_URL=https://jobmaxxing.app`, add `https://jobmaxxing.app/*` to
-      `host_permissions` or the extension can't call the API or read the cookie.
+      `https://jobmaxxing.app/*` is now committed, so shipping with
+      `APP_URL=https://jobmaxxing.app` works out of the box. If you deploy under a
+      different origin, add that exact origin to `host_permissions` or the
+      extension can't call the API or read the cookie.
 - [ ] No service-role or Gemini key anywhere in `config.js`.
 - [ ] Work through [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 
