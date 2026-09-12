@@ -24,7 +24,6 @@ import { todayLocalDate } from './src/util/date.js';
 import {
   captureEligibility,
   injectionFailure,
-  NOT_JOB_POSTING,
 } from './src/util/tab-url.js';
 
 const ALARM_PREFIX = 'followup:';
@@ -271,8 +270,7 @@ async function handleMessage(msg, sender) {
       return { ok: true };
     }
 
-    case MSG.CHECK_JOB_PAGE:
-    case MSG.SCRAPE_TAB: {
+    case MSG.CHECK_JOB_PAGE: {
       const tabId = msg.tabId ?? sender.tab?.id;
       if (!tabId) return { ok: false, error: 'No active tab' };
       const tab = await chrome.tabs.get(tabId).catch(() => null);
@@ -291,20 +289,20 @@ async function handleMessage(msg, sender) {
         }
         throw error;
       }
-      if (!inspection.isJobPosting) {
-        return {
-          ok: msg.type === MSG.CHECK_JOB_PAGE,
-          isJobPosting: false,
-          code: NOT_JOB_POSTING,
-          error: msg.type === MSG.SCRAPE_TAB
-            ? 'Open an individual job posting before using Grab.'
-            : null,
-        };
-      }
-      if (msg.type === MSG.CHECK_JOB_PAGE) {
-        return { ok: true, isJobPosting: true, signal: inspection.signal };
+      return { ok: true, isJobPosting: inspection.isJobPosting, signal: inspection.signal };
+    }
+
+    case MSG.SCRAPE_TAB: {
+      const tabId = msg.tabId ?? sender.tab?.id;
+      if (!tabId) return { ok: false, error: 'No active tab' };
+      const tab = await chrome.tabs.get(tabId).catch(() => null);
+      const eligibility = captureEligibility(tab?.url);
+      if (!eligibility.ok) {
+        return { ok: false, code: eligibility.code, error: eligibility.message };
       }
 
+      // Grab always attempts to read the current page — there is no job-posting
+      // gate. The scraper does the best it can and the user reviews the result.
       let injection;
       try {
         [injection] = await chrome.scripting.executeScript({

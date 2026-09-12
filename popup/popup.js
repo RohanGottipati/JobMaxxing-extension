@@ -14,7 +14,6 @@ import { todayLocalDate } from '../src/util/date.js';
 import { defaultMergedPdfName } from '../src/util/pdf-name.js';
 import { recruitingSeasons } from '../src/util/recruiting-seasons.js';
 import { findByJobUrl } from '../src/util/job-url.js';
-import { captureEligibility } from '../src/util/tab-url.js';
 
 let editingId = null;
 let scrapedJobUrl = null;
@@ -25,7 +24,6 @@ let justSaved = null;
 let lastAction = null;
 let grabEligibility = { ok: false, code: null, message: '' };
 let grabError = null;
-let grabHintRequest = 0;
 let grabHintResolved = false;
 let appliedDateIsAutomatic = false;
 let resumeFile = null;
@@ -148,6 +146,17 @@ async function refreshActiveTab() {
   await updateGrabHint(tab);
 }
 
+// The side panel stays open while the user browses, so keep the active tab (and
+// the "already tracking" hint) in sync as they switch or navigate tabs.
+function refreshActiveTabIfHome() {
+  if (formView.style.display !== 'none' || mergeView.style.display !== 'none') return;
+  void refreshActiveTab();
+}
+chrome.tabs.onActivated.addListener(refreshActiveTabIfHome);
+chrome.tabs.onUpdated.addListener((_tabId, info, tab) => {
+  if (tab.active && (info.status === 'complete' || info.url)) refreshActiveTabIfHome();
+});
+
 function detectPageMatch(tab) {
   pageMatch = asNoticeApp(findByJobUrl(indexCache, tab?.url));
 }
@@ -236,60 +245,17 @@ function syncResolvedGrabHint() {
   grabSub.textContent = grabError || 'Capture the role and job description';
 }
 
-async function updateGrabHint(tab) {
+// The Grab button is always available. We no longer pre-inspect the page (which
+// required host access just to decide whether to enable the button, and wrongly
+// rejected valid postings on unlisted sites). Page access is requested on click.
+async function updateGrabHint() {
   if (btnGrab.getAttribute('aria-busy') === 'true') return;
   btnGrab.hidden = false;
-  const request = ++grabHintRequest;
-  grabEligibility = { ok: false, code: null, message: '' };
-  btnGrab.disabled = true;
-  if (!grabHintResolved) {
-    btnGrab.title = 'Checking whether this tab is a job posting';
-    grabTitle.textContent = 'Checking this page…';
-    grabSub.textContent = 'Grab works only on individual job postings';
-  }
-  try {
-    if (request !== grabHintRequest) return;
-    grabEligibility = captureEligibility(tab?.url);
-    if (!grabEligibility.ok) {
-      grabTitle.textContent = 'Not a job posting';
-      grabSub.textContent = '';
-      btnGrab.title = 'Not a job posting';
-      btnGrab.disabled = true;
-      grabHintResolved = true;
-      return;
-    }
-
-    const result = await send(MSG.CHECK_JOB_PAGE, { tabId: tab.id });
-    if (request !== grabHintRequest) return;
-    if (!result?.ok || result.error) {
-      throw new Error(result?.error || 'Could not inspect this page.');
-    }
-    if (!result.isJobPosting) {
-      const message = 'Not a job posting';
-      grabEligibility = { ok: false, code: result.code, message };
-      grabTitle.textContent = 'Not a job posting';
-      grabSub.textContent = '';
-      btnGrab.title = message;
-      btnGrab.disabled = true;
-      grabHintResolved = true;
-      return;
-    }
-
-    grabEligibility = { ok: true, code: null, message: '' };
-    grabHintResolved = true;
-    btnGrab.disabled = false;
-    btnGrab.title = 'Capture the job posting on the current tab';
-    syncResolvedGrabHint();
-  } catch (error) {
-    if (request !== grabHintRequest) return;
-    const message = error instanceof Error ? error.message : 'Could not inspect this page.';
-    grabEligibility = { ok: false, message };
-    grabHintResolved = true;
-    btnGrab.disabled = true;
-    btnGrab.title = message;
-    grabTitle.textContent = message === 'Not a job posting' ? message : 'Can’t check this page';
-    grabSub.textContent = message === 'Not a job posting' ? '' : message;
-  }
+  grabEligibility = { ok: true, code: null, message: '' };
+  grabHintResolved = true;
+  btnGrab.disabled = false;
+  btnGrab.title = 'Capture the role and job description from this page';
+  syncResolvedGrabHint();
 }
 
 document.getElementById('btn-add').addEventListener('click', () => openAddForm());
@@ -319,14 +285,23 @@ btnApplyMatch.addEventListener('click', async () => {
 
 btnGrab.addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) return;
-  grabEligibility = captureEligibility(tab.url);
-  if (!grabEligibility.ok) {
-    grabError = null;
+  grabError = null;
+
+  // Only http/https pages can be scripted. Everything else (chrome://, the web
+  // store, the new-tab page) can't be captured — let the user add it manually.
+  let isWebPage = false;
+  try {
+    const url = new URL(tab?.url || '');
+    isWebPage = url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    // isWebPage stays false
+  }
+  if (!tab?.id || !isWebPage) {
+    grabError = 'This page can’t be captured. Use “Add application” to enter it manually.';
     await refreshActiveTab();
     return;
   }
-  grabError = null;
+
   setGrabBusy(true);
   try {
     const res = await send(MSG.SCRAPE_TAB, { tabId: tab.id });
@@ -357,6 +332,17 @@ btnGrab.addEventListener('click', async () => {
     });
   } catch (error) {
     grabError = error instanceof Error ? error.message : 'Could not capture this page.';
+    // Like jobtrack: never leave the user stuck. Open the form so the role can
+    // still be added (and the description pasted) even if the page couldn't be
+    // read, with the URL pre-filled.
+    let jobUrl = '';
+    try {
+      const url = new URL(tab.url || '');
+      if (url.protocol === 'http:' || url.protocol === 'https:') jobUrl = tab.url;
+    } catch {
+      // no usable url
+    }
+    openAddForm({ jobUrl });
   } finally {
     setGrabBusy(false);
     await refreshActiveTab();
