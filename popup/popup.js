@@ -639,34 +639,64 @@ function addMergeFiles(fileList) {
   else setMergeStatus('');
 }
 
+let mergeDragFrom = -1;
+
 function renderMergeList() {
   mergeListEl.innerHTML = '';
   mergeFiles.forEach((file, i) => {
     const li = document.createElement('li');
     li.className = 'merge-item';
+    li.dataset.idx = String(i);
     li.innerHTML = `
+      <button class="merge-item-grip" title="Drag to reorder" aria-label="Drag to reorder"><svg viewBox="0 0 20 20"><circle cx="7" cy="5" r="1.4"/><circle cx="13" cy="5" r="1.4"/><circle cx="7" cy="10" r="1.4"/><circle cx="13" cy="10" r="1.4"/><circle cx="7" cy="15" r="1.4"/><circle cx="13" cy="15" r="1.4"/></svg></button>
       <span class="merge-item-idx">${i + 1}</span>
       <span class="merge-item-name" title="${esc(file.name)}">${esc(file.name)}</span>
       <span class="merge-item-size">${humanSize(file.size)}</span>
       <span class="merge-item-btns">
-        <button class="up" title="Move up" ${i === 0 ? 'disabled' : ''}><svg viewBox="0 0 20 20"><path d="M10 5l5 6H5l5-6z"/></svg></button>
-        <button class="down" title="Move down" ${i === mergeFiles.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 20 20"><path d="M10 15l-5-6h10l-5 6z"/></svg></button>
         <button class="rm" title="Remove"><svg viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
       </span>`;
-    li.querySelector('.up').addEventListener('click', () => moveMerge(i, -1));
-    li.querySelector('.down').addEventListener('click', () => moveMerge(i, 1));
     li.querySelector('.rm').addEventListener('click', () => { mergeFiles.splice(i, 1); renderMergeList(); });
+
+    // Only the grip initiates a drag, so button clicks aren't hijacked.
+    const grip = li.querySelector('.merge-item-grip');
+    grip.addEventListener('mousedown', () => { li.draggable = true; });
+    grip.addEventListener('mouseup', () => { li.draggable = false; });
+
+    li.addEventListener('dragstart', (e) => {
+      mergeDragFrom = i;
+      li.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(i));
+    });
+    li.addEventListener('dragend', () => {
+      li.draggable = false;
+      mergeDragFrom = -1;
+      mergeListEl.querySelectorAll('.merge-item').forEach((el) => el.classList.remove('dragging', 'drop-before', 'drop-after'));
+    });
+    li.addEventListener('dragover', (e) => {
+      if (mergeDragFrom < 0 || mergeDragFrom === i) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const before = e.clientY < li.getBoundingClientRect().top + li.offsetHeight / 2;
+      li.classList.toggle('drop-before', before);
+      li.classList.toggle('drop-after', !before);
+    });
+    li.addEventListener('dragleave', () => li.classList.remove('drop-before', 'drop-after'));
+    li.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (mergeDragFrom < 0 || mergeDragFrom === i) return;
+      const before = e.clientY < li.getBoundingClientRect().top + li.offsetHeight / 2;
+      let to = before ? i : i + 1;
+      const [moved] = mergeFiles.splice(mergeDragFrom, 1);
+      if (mergeDragFrom < to) to -= 1;
+      mergeFiles.splice(to, 0, moved);
+      renderMergeList();
+    });
+
     mergeListEl.appendChild(li);
   });
   btnMergeGo.disabled = mergeFiles.length < 1;
   btnMergeClear.style.display = mergeFiles.length ? 'inline-flex' : 'none';
-}
-
-function moveMerge(i, dir) {
-  const j = i + dir;
-  if (j < 0 || j >= mergeFiles.length) return;
-  [mergeFiles[i], mergeFiles[j]] = [mergeFiles[j], mergeFiles[i]];
-  renderMergeList();
 }
 
 function setMergeStatus(msg, kind = 'info') {
