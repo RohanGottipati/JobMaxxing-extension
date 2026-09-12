@@ -1,6 +1,6 @@
 # Privacy and data handling
 
-Updated: September 4, 2026
+Updated: September 11, 2026
 
 This document describes version 1.2.1 of the JobMaxxing Chrome extension source. The operator of a packaged release must publish its own contact details, deployed privacy URL and any additional legal terms.
 
@@ -21,9 +21,14 @@ Signing out clears the stored session, display data and cached application index
 
 ## Job-page access
 
-Content scripts on LinkedIn, Workday, Greenhouse, Lever and Ashby look for job-posting signals and may set a `NEW` badge. They do not send a job description to JobMaxxing merely because the page was opened.
+The extension holds broad host access (`*://*/*`) so that **Grab this posting** can capture a role from any career site, not only a fixed list of job boards. Chrome therefore shows a "read and change all your data on all websites" disclosure at install. Broad access is required because the side panel cannot request per-site permission on demand.
 
-After the user selects **Grab this posting**, the extension reads available page metadata, `JobPosting` structured data and visible job-description elements. The user can review and change the captured company, role, location, URL, description, deadline and recruiting season before saving. Manual entry is available when capture is not appropriate.
+Broad access does **not** mean pages are read in the background. The extension reads a page's content only in two explicit cases:
+
+- **Automatic badge detection (supported boards only).** Content scripts on LinkedIn, Workday, Greenhouse, Lever, Ashby and Dayforce HCM look for job-posting signals and may set a `NEW` badge. They do not send a job description to JobMaxxing merely because the page was opened.
+- **On Grab.** When the user selects **Grab this posting** on any tab, the extension reads that page's available metadata, `JobPosting` structured data and visible job-description elements. The user can review and change the captured company, role, location, URL, description, deadline and recruiting season before saving. Manual entry is available when capture is not appropriate.
+
+No page content is read, stored or transmitted except through these two paths.
 
 ## Data sent to JobMaxxing and Supabase
 

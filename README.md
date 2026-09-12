@@ -8,10 +8,10 @@ Current release source: **1.2.1**, Manifest V3, Chrome 114 or newer. The reposit
 
 ## What it does
 
-- Detects individual job pages on LinkedIn, Workday, Greenhouse, Lever, Ashby and Dayforce HCM
-- Captures company, role, location, job URL, description, deadline and recruiting season when available
-- Can recognize other pages with `JobPosting` structured data after the user opens the extension for that tab
-- Supports manual entry when a page cannot be confirmed or extracted
+- Flags individual job pages with a `NEW` badge on LinkedIn, Workday, Greenhouse, Lever, Ashby and Dayforce HCM
+- **Grab this posting** captures the current page on **any** site — not just the boards above
+- Captures company, role, location, job URL, description, deadline and recruiting season when available (via `JobPosting` structured data, known ATS containers, then a generic text heuristic)
+- Supports manual entry, and still opens the form to add a role by hand when a page cannot be read
 - Saves PDF or DOCX resume and cover-letter copies with the application
 - Detects duplicate job URLs and job descriptions
 - Opens from Chrome's toolbar as a persistent side panel
@@ -48,8 +48,8 @@ Never place a Supabase secret/service-role key or Gemini key in the extension. F
 
 ## User flow
 
-1. Open a supported job posting and select the JobMaxxing toolbar icon.
-2. Select **Grab this posting**.
+1. Open a job posting on any site and select the JobMaxxing toolbar icon.
+2. Select **Grab this posting** (always available).
 3. Review the extracted fields and optionally attach the exact resume and cover letter you used.
 4. Save the application.
 5. Use **Open in JobMaxxing** to edit details, run a career match or manage the saved documents.
@@ -58,18 +58,18 @@ If the current page is already tracked, the side panel offers to update or open 
 
 ## Capture behavior
 
-The built-in job-board host patterns run a small detector that sets the extension badge when the current page looks like an individual posting. The full company, role and description snapshot is collected only after the user selects **Grab this posting**. A manual **Add application** action is available without scraping the page.
+The built-in job-board host patterns run a small content-script detector that sets the `NEW` badge when the current page looks like an individual posting (LinkedIn, Workday, Greenhouse, Lever, Ashby, Dayforce HCM). **Grab this posting** is not limited to those boards — it is always clickable and captures the current tab on any site only after you select it. A manual **Add application** action is available without scraping the page.
 
 The extension uses the web app's eight statuses: Saved, Applied, Online Assessment, Interview, Final Round, Offer, Rejected and Withdrawn. Moving a Saved role forward sets the applied date when one is not already present.
 
 ## Permissions
 
 - `storage` keeps the Supabase session, display details, recent-application index and local preferences in Chrome local storage.
-- `activeTab` and `scripting` inspect and capture the page after user interaction.
+- `scripting` (with `activeTab`) injects the scraper into the current tab when you select **Grab this posting**.
 - `tabs` reads the active tab, opens JobMaxxing and clears badge state when navigation starts.
 - `cookies` mirrors the Supabase session between the extension and the configured JobMaxxing origin.
 - `sidePanel` hosts the persistent interface; `alarms` supports previously configured local follow-up reminders.
-- Host permissions are limited to supported job-board families (LinkedIn, Workday, Greenhouse, Lever, Ashby, Dayforce HCM), the configured Supabase project pattern, local development and the intended JobMaxxing app origin. The manifest no longer requests optional access to every website.
+- **Host permissions are broad (`*://*/*`)** so **Grab this posting** can read the current page on any site. A side panel cannot request per-site access on demand, so broad access is required for capture to work off the built-in boards — this is why Chrome shows the "read and change all your data on all websites" disclosure. The page is only read when you explicitly select Grab; content-script badge detection still runs only on the supported boards.
 
 See [Privacy and data handling](docs/PRIVACY.md) for the exact local and remote data flow.
 

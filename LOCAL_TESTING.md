@@ -88,11 +88,10 @@ npm test    # node --test src/*.test.js
 
 ## 3. What does NOT need toggling
 
-- **`manifest.json` host permissions** are committed and list both
-  `http://localhost:3000/*` and `https://job-maxxing.vercel.app/*` (plus the
-  other Vercel origin), so both local dev and the deployed app work without
-  edits — only `config.js` `APP_URL` decides which one the extension actually
-  targets.
+- **`manifest.json` host permissions** are broad (`*://*/*`), so they already
+  cover both `http://localhost:3000` and the deployed origin (and every site the
+  Grab button captures). Nothing to edit per environment — only `config.js`
+  `APP_URL` decides which app the extension actually targets.
 
 ---
 
@@ -103,11 +102,10 @@ npm test    # node --test src/*.test.js
 - [ ] `APP_URL` = `https://job-maxxing.vercel.app` (production origin).
 - [ ] `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` = the production project's
       public values.
-- [ ] **`manifest.json` `host_permissions` includes the exact `APP_URL` origin.**
-      `https://job-maxxing.vercel.app/*` is committed, so shipping with
-      `APP_URL=https://job-maxxing.vercel.app` works out of the box. If you deploy
-      under a different origin, add that exact origin to `host_permissions` or the
-      extension can't call the API or read the cookie.
+- [ ] **`host_permissions` covers your `APP_URL` origin.** It is broad (`*://*/*`),
+      so any deployed origin is already covered for API calls and cookie access —
+      no per-origin entry to add. (This breadth is also what lets **Grab this
+      posting** read any site; it shows the "all websites" install warning.)
 - [ ] No service-role or Gemini key anywhere in `config.js`.
 - [ ] Work through [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 

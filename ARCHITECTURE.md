@@ -112,12 +112,12 @@ Message types (from `src/messages.js`), all requiring auth except detection:
 ## 5. Data flow — capturing a posting
 
 ```
-Content script detects posting ──▶ badge "NEW" (PAGE_DETECTED)
+Content script detects posting ──▶ badge "NEW" (PAGE_DETECTED)   (supported boards only)
         │
-User opens side panel, clicks "Grab this posting"
+User opens side panel, clicks "Grab this posting"  (always available, any page)
         │  popup ── SCRAPE_TAB ──▶ background
         ▼
-background: captureEligibility(url) → inject detectJobPostingPage → scrapePage
+background: captureEligibility(url) → inject scrapePage
         │  returns {title, company, location, description, deadline,
         │           recruitingSeason, sourceHost, jobUrl}
         ▼
@@ -141,24 +141,31 @@ and the `aiConsent` gate are load-bearing.
 
 ---
 
-## 6. Supported job boards & permissions
+## 6. Capture scope & permissions
 
-Auto-detected via content script + host permissions: **LinkedIn, Workday
-(`myworkdayjobs.com`), Greenhouse, Lever, Ashby, Dayforce HCM**. Other pages can
-be captured after the user opens the extension for that tab and the page exposes
-`JobPosting` structured data; manual entry is always available.
+**Auto-detection (badge):** a content script sets a `NEW` badge only on the
+built-in boards — **LinkedIn, Workday (`myworkdayjobs.com`), Greenhouse, Lever,
+Ashby, Dayforce HCM**.
+
+**Capture (Grab):** works on **any page**. The **Grab this posting** button is
+always available; clicking it scrapes the current tab (`scrapePage`: JSON-LD →
+known ATS containers → generic text-density heuristic). There is no job-posting
+gate — if a page can't be read, the form still opens for manual entry.
 
 | Permission | Why |
 |------------|-----|
 | `storage` | Session, display info, recent-application index, prefs |
-| `activeTab` + `scripting` | Inspect/scrape the page after user action |
+| `scripting` (+ `activeTab`) | Inject the scraper into the current tab on Grab |
 | `tabs` | Read active tab, open JobMaxxing, clear badge on navigation |
 | `cookies` | Mirror the Supabase session with the JobMaxxing origin |
 | `sidePanel` | Host the persistent UI |
 | `alarms` | Follow-up reminders |
 
-Host permissions are limited to the supported boards, the Supabase project, and
-the configured app origins (localhost + deployed). See [`docs/PRIVACY.md`](docs/PRIVACY.md).
+`host_permissions` is broad — **`*://*/*`** — so Grab can read the current page
+on any site (a side panel can't obtain per-site access on demand, so broad
+access is required). This produces Chrome's "read and change all your data on all
+websites" disclosure. Content-script badge detection stays limited to the
+supported boards. See [`docs/PRIVACY.md`](docs/PRIVACY.md).
 
 ---
 
