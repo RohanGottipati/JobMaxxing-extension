@@ -84,7 +84,7 @@ async function storeSessionDisplay(display) {
   await chrome.storage.local.set({ [DISPLAY_KEY]: display });
 }
 
-export async function getCachedSessionDisplay() {
+async function getCachedSessionDisplay() {
   const result = await chrome.storage.local.get(DISPLAY_KEY);
   return result[DISPLAY_KEY] ?? null;
 }
@@ -209,7 +209,7 @@ export async function getCurrentUser() {
   return user;
 }
 
-export function formatShortName(fullName, email) {
+function formatShortName(fullName, email) {
   const parts = String(fullName || '')
     .trim()
     .split(/\s+/)

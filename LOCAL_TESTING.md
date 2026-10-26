@@ -3,28 +3,28 @@
 How to run the extension against a local web app, what to flip to `localhost`, and
 what to flip **back** before you package/publish.
 
-Web side of the same workflow: [`../web/LOCAL_TESTING.md`](../web/LOCAL_TESTING.md).
+Web side of the same workflow: the web app's [`LOCAL_TESTING.md`](https://github.com/RohanGottipati/JobMaxxing/blob/main/LOCAL_TESTING.md).
 
 ---
 
 ## Local vs. committed (GitHub) configuration
 
 The committed code targets the **deployed** app: `config.example.js` defaults
-`APP_URL` to `https://job-maxxing.vercel.app` and `manifest.json`
-`host_permissions` includes `https://job-maxxing.vercel.app/*`. Your **local**
+`APP_URL` to `https://job-maxxing.vercel.app`, and `manifest.json`
+`host_permissions` is broad (`*://*/*`), so it covers that origin. Your **local**
 `config.js` (gitignored) is where you point the extension at the local web app
 for testing.
 
 | Where | `APP_URL` | Connects the extension to |
 |-------|-----------|---------------------------|
 | Local working copy — `config.js` (gitignored) | `http://localhost:3000` | the local web app |
-| GitHub / committed — `config.example.js`, manifest | `https://job-maxxing.vercel.app` | the deployed app |
+| GitHub / committed — `config.example.js` | `https://job-maxxing.vercel.app` | the deployed app |
 
 ## TL;DR — the one thing that toggles
 
 | File | Local value | Deployed value |
 |------|-------------|----------------|
-| `extension/config.js` → `APP_URL` | `http://localhost:3000` | `https://job-maxxing.vercel.app` |
+| `config.js` → `APP_URL` | `http://localhost:3000` | `https://job-maxxing.vercel.app` |
 
 ```js
 // config.js  (gitignored; set this to localhost for local testing)
@@ -45,7 +45,7 @@ export const APP_URL = 'http://localhost:3000';
 ## 1. Prerequisites
 
 - The web app running locally on `http://localhost:3000`
-  (see [`../web/LOCAL_TESTING.md`](../web/LOCAL_TESTING.md)).
+  (see the web app's [`LOCAL_TESTING.md`](https://github.com/RohanGottipati/JobMaxxing/blob/main/LOCAL_TESTING.md)).
 - `config.js` present. If missing, copy the template:
   ```bash
   cp config.example.js config.js
@@ -65,7 +65,7 @@ export const APP_URL = 'http://localhost:3000';   // ← local value
 ## 2. Load & run locally
 
 1. `chrome://extensions` → enable **Developer mode**.
-2. **Load unpacked** → select this `extension/` folder.
+2. **Load unpacked** → select this repository folder.
 3. Click the JobMaxxing toolbar icon to open the side panel.
 4. Sign in with the same JobMaxxing account as the web app. The extension mirrors
    the web session via cookie (`localhost:3000` is always an allowed origin — see
@@ -123,6 +123,6 @@ git diff --cached | grep -n "localhost:3000" || echo "clean"
 
 ```
 LOCAL  → config.js: APP_URL = 'http://localhost:3000'   + web app on :3000
-PROD   → config.js: APP_URL = 'https://job-maxxing.vercel.app'  + host_permissions updated
+PROD   → config.js: APP_URL = 'https://job-maxxing.vercel.app'  (host_permissions already cover it)
          (then reload / repackage)
 ```

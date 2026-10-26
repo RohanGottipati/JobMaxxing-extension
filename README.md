@@ -4,7 +4,7 @@ Capture and review a job posting in a persistent Chrome side panel, then save it
 
 The extension does **not** fill or submit employer application forms. It records the role, job-description snapshot and optional copies of the files you submitted.
 
-Current release source: **1.2.1**, Manifest V3, Chrome 114 or newer. The repository documents developer installation; it does not claim that this source version is published in the Chrome Web Store.
+Current release source: **1.3.0**, Manifest V3, Chrome 114 or newer. The repository documents developer installation; it does not claim that this source version is published in the Chrome Web Store.
 
 ## What it does
 
@@ -20,9 +20,39 @@ Current release source: **1.2.1**, Manifest V3, Chrome 114 or newer. The reposit
 - Requests deterministic server-side parsing after saving a job description; Gemini enrichment runs only when the server is configured and the account has granted AI consent
 - Combines selected PDFs locally in the browser
 
+## Tech stack
+
+- Chrome Manifest V3: module service worker (`background.js`), side panel UI and a content script
+- Vanilla JavaScript ES modules, HTML and CSS: no framework, bundler or build step
+- Supabase Auth and Storage plus the JobMaxxing web app's `/api/extension/*` REST API
+- [pdf-lib](https://pdf-lib.js.org/), vendored as `vendor/pdf-lib.min.js`, for merging PDFs locally
+- Node's built-in `node:test` runner for tests (no npm dependencies)
+
+## Project structure
+
+```
+manifest.json        MV3 manifest: permissions, host access, entry points
+background.js        Service worker: message router, capture, badge and alarms
+config.example.js    Template for the gitignored config.js
+popup/               Side-panel UI (popup.html, popup.css, popup.js)
+content/content.js   Badge detector on the built-in job boards
+src/                 Shared modules: auth, API clients, scraper, storage, mapping, utils, tests
+vendor/              Vendored pdf-lib
+icons/               Extension icons
+docs/                Privacy notes and release checklist
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the message contract, data flow and auth model, and [LOCAL_TESTING.md](LOCAL_TESTING.md) for running against a local web app.
+
+## Prerequisites
+
+- Google Chrome 114 or newer (Side Panel API)
+- A running JobMaxxing web app, either the deployed `https://job-maxxing.vercel.app` or a local instance on `http://localhost:3000`, plus the public settings of the Supabase project it uses
+- Node.js, only to run the tests (no packages to install)
+
 ## Local setup
 
-1. Apply the latest migrations and start the JobMaxxing web app.
+1. If you are testing against a local web app, apply its latest migrations and start it. See the [web app repository](https://github.com/RohanGottipati/JobMaxxing).
 
 2. Copy the example configuration:
 
@@ -35,16 +65,26 @@ cp config.example.js config.js
 ```js
 export const SUPABASE_URL = "https://your-project.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_your-key";
-export const APP_URL = "http://localhost:3000";
+export const APP_URL = "http://localhost:3000"; // or https://job-maxxing.vercel.app
 ```
 
 Get the URL and publishable key from the Supabase project's **Connect** dialog or **Settings → API Keys**. Publishable keys are intended for public clients and remain constrained by grants, Supabase Auth, RLS and Storage policies. Existing `config.js` files may continue to export the legacy `SUPABASE_ANON_KEY` during migration, but new configuration should use `SUPABASE_PUBLISHABLE_KEY`.
 
-Never place a Supabase secret/service-role key or Gemini key in the extension. For a production package, set `APP_URL` to the deployed HTTPS origin and make sure the exact origin is present in `host_permissions` in `manifest.json`.
+Never place a Supabase secret/service-role key or Gemini key in the extension. For a production package, set `APP_URL` to the deployed HTTPS origin. The broad `host_permissions` (`*://*/*`) in `manifest.json` already covers it.
 
-4. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select this repository folder.
+4. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select this repository folder. Reload the extension after you edit `config.js`.
 
 5. Select the JobMaxxing toolbar icon to open the side panel, then sign in with your JobMaxxing email and password. The extension stores a local Supabase session and mirrors it to or from the configured website when Chrome cookie access is available.
+
+### Configuration
+
+The extension has no `.env` file. Settings live in `config.js`, which is gitignored and is imported by `src/auth/*` and `src/api/*`:
+
+| Export | Purpose |
+|--------|---------|
+| `SUPABASE_URL` | HTTPS URL of the Supabase project shared with the web app |
+| `SUPABASE_PUBLISHABLE_KEY` | Public `sb_publishable_...` key (legacy fallback: `SUPABASE_ANON_KEY`) |
+| `APP_URL` | Origin of the JobMaxxing web app used for API calls, deep links and session-cookie sync |
 
 ## User flow
 
@@ -73,17 +113,17 @@ The extension uses the web app's eight statuses: Saved, Applied, Online Assessme
 
 See [Privacy and data handling](docs/PRIVACY.md) for the exact local and remote data flow.
 
-## Tests
+## Scripts
 
 ```bash
-npm test
+npm test   # node --test src/*.test.js
 ```
 
-The test suite covers status mapping, job URL normalization, network error handling, page detection, document policy and the capture workflow.
+The test suite covers status mapping, job URL normalization, network error handling, page detection, document policy and the capture workflow. There is no build, lint or install step.
 
 ## Release checklist
 
-Before packaging or updating a store listing, follow [the release checklist](docs/RELEASE_CHECKLIST.md). In particular, verify that `config.js`, the app host permission, the privacy URL and the listing copy all describe the same deployed release.
+The extension is distributed as the repository folder (loaded unpacked or zipped for the Chrome Web Store) with `config.js` included. Before packaging or updating a store listing, follow [the release checklist](docs/RELEASE_CHECKLIST.md). In particular, verify that `config.js`, the app host permission, the privacy URL and the listing copy all describe the same deployed release.
 
 ## Related repository
 

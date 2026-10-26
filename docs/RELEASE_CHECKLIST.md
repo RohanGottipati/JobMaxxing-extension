@@ -2,7 +2,7 @@
 
 Updated: September 11, 2026
 
-Use this checklist for a developer-distributed archive or Chrome Web Store submission. The repository's current version is 1.2.1 and requires Chrome 114 or newer because it uses the Side Panel API.
+Use this checklist for a developer-distributed archive or Chrome Web Store submission. The repository's current version is 1.3.0 and requires Chrome 114 or newer because it uses the Side Panel API.
 
 ## 1. Configure the production targets
 

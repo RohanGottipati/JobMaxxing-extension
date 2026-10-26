@@ -2,7 +2,7 @@
 
 Updated: September 11, 2026
 
-This document describes version 1.2.1 of the JobMaxxing Chrome extension source. The operator of a packaged release must publish its own contact details, deployed privacy URL and any additional legal terms.
+This document describes version 1.3.0 of the JobMaxxing Chrome extension source. The operator of a packaged release must publish its own contact details, deployed privacy URL and any additional legal terms.
 
 ## Product boundary
 

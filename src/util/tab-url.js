@@ -5,7 +5,6 @@ const BLOCKED_WEB_STORE_HOSTS = new Set([
 
 export const UNSCRIPTABLE_TAB = 'UNSCRIPTABLE_TAB';
 export const TAB_CHANGED = 'TAB_CHANGED';
-export const NOT_JOB_POSTING = 'NOT_JOB_POSTING';
 
 export function captureEligibility(input) {
   let url;

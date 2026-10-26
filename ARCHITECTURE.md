@@ -5,7 +5,7 @@
 > you submitted) into the same account as the web app. It does **not** fill or
 > submit employer forms.
 >
-> Companion doc: [`../web/ARCHITECTURE.md`](../web/ARCHITECTURE.md).
+> Companion doc: the web app's [`ARCHITECTURE.md`](https://github.com/RohanGottipati/JobMaxxing/blob/main/ARCHITECTURE.md).
 > Both docs use the same section layout so you can read them side by side.
 
 ---
@@ -28,7 +28,7 @@
 The extension is a **thin capture client**. It owns no schema and no business
 rules about applications — it scrapes pages, uploads documents, and delegates
 persistence to the web app's API and Supabase. The web app is the system of
-record (see [`web/ARCHITECTURE.md` §1](../web/ARCHITECTURE.md)).
+record (see the web app's [`ARCHITECTURE.md` §1](https://github.com/RohanGottipati/JobMaxxing/blob/main/ARCHITECTURE.md)).
 
 ---
 
@@ -54,10 +54,10 @@ serializes them without their module scope.
 ## 3. Directory layout
 
 ```
-extension/
+JobMaxxing-extension/
 ├── manifest.json           # MV3 manifest: permissions, hosts, entry points
 ├── background.js           # Service worker — message router + orchestration (§4)
-├── config.js               # Local secrets-free config (SUPABASE_URL, key, APP_URL)
+├── config.js               # Local config, gitignored (SUPABASE_URL, publishable key, APP_URL)
 ├── config.example.js       # Template to copy into config.js
 ├── popup/                  # Side-panel UI (html/css/js)
 ├── content/
@@ -75,12 +75,12 @@ extension/
 │   │   ├── jobmaxxing.js    # Calls the web app's /api/extension/* endpoints (§5)
 │   │   └── documents.js     # Uploads resume/cover-letter files to Supabase Storage
 │   ├── scrape/
-│   │   ├── page.js          # detectJobPostingPage / scrapePage (run in page)
-│   │   └── inject.js        # Formatted-text extraction helper
+│   │   └── page.js          # detectJobPostingPage / scrapePage (run in page)
 │   ├── document-policy.js   # File type/size rules + storage path builder
 │   ├── auth-gate.js         # Gates UI on auth state
-│   └── util/                # csv, date, hash, job-url, pdf-name, tab-url, seasons
-├── icons/                   # Toolbar + store icons
+│   ├── util/                # date, job-url, pdf-name, recruiting-seasons, tab-url
+│   └── *.test.js            # node:test suites
+├── icons/                   # Toolbar + store icons (+ logo source image)
 ├── vendor/                  # pdf-lib (vendored)
 └── docs/                    # PRIVACY.md, RELEASE_CHECKLIST.md
 ```
@@ -105,7 +105,7 @@ Message types (from `src/messages.js`), all requiring auth except detection:
 | Auth | `SIGN_IN`, `SIGN_OUT`, `GET_SESSION` |
 | Applications | `SAVE_APPLICATION`, `UPDATE_APPLICATION`, `DELETE_APPLICATION`, `GET_APPLICATION`, `GET_ALL`, `GET_INDEX`, `REPAIR_INDEX` |
 | Data mgmt | `EXPORT_JSON`, `IMPORT_JSON`, `WIPE_ALL` |
-| Page capture | `CHECK_JOB_PAGE`, `SCRAPE_TAB`, `SCRAPE_PAGE`, `PAGE_DETECTED` |
+| Page capture | `CHECK_JOB_PAGE`, `SCRAPE_TAB`, `PAGE_DETECTED` |
 
 ---
 
@@ -122,10 +122,10 @@ background: captureEligibility(url) → inject scrapePage
         │           recruitingSeason, sourceHost, jobUrl}
         ▼
 User reviews fields, optionally attaches resume/cover-letter files
+        │  popup → api/documents.js → upload files to Supabase Storage (job-documents)
         │  popup ── SAVE_APPLICATION ──▶ background
         ▼
 background → storage.saveApplication
-        ├─ api/documents.js  → upload files to Supabase Storage (job-documents)
         ├─ api/jobmaxxing.js → POST /api/extension/applications  (Bearer JWT)
         │        └─ 409 ⇒ surfaced to user as a duplicate
         └─ maybeAnalyze() → POST …/analyze (server parse; Gemini only if consented)
@@ -136,7 +136,7 @@ app's "track" shape. `src/storage.js` keeps a local index cache in
 `chrome.storage.local` but treats the API as the source of truth.
 
 **This depends on the web app's `/api/extension/*` contract** — see
-[`web/ARCHITECTURE.md` §5](../web/ARCHITECTURE.md). The `409` duplicate response
+the web app's [`ARCHITECTURE.md` §5](https://github.com/RohanGottipati/JobMaxxing/blob/main/ARCHITECTURE.md). The `409` duplicate response
 and the `aiConsent` gate are load-bearing.
 
 ---
@@ -159,7 +159,7 @@ gate — if a page can't be read, the form still opens for manual entry.
 | `tabs` | Read active tab, open JobMaxxing, clear badge on navigation |
 | `cookies` | Mirror the Supabase session with the JobMaxxing origin |
 | `sidePanel` | Host the persistent UI |
-| `alarms` | Follow-up reminders |
+| `alarms` | Optional follow-up reminders (when `prefs.followupEnabled` is set) |
 
 `host_permissions` is broad — **`*://*/*`** — so Grab can read the current page
 on any site (a side panel can't obtain per-site access on demand, so broad
@@ -185,7 +185,7 @@ The extension shares one identity with the web app in two ways:
 A `sessionSource` marker (`web` vs `popup`) records where the current session
 came from, so a missing website cookie only signs the extension out when the
 session originated from the web. Cookie name/domain must match the web app's
-scoping — see [`web/ARCHITECTURE.md` §7](../web/ARCHITECTURE.md).
+scoping — see the web app's [`ARCHITECTURE.md` §7](https://github.com/RohanGottipati/JobMaxxing/blob/main/ARCHITECTURE.md).
 
 ---
 

@@ -86,11 +86,6 @@ export async function analyzeApplication(applicationId, sourceText) {
   });
 }
 
-export function applicationUrl(id, view = "overview") {
-  const viewParam = view && view !== "overview" ? `&view=${view}` : "";
-  return `${API_ORIGIN}/applications?id=${id}${viewParam}`;
-}
-
 export function openJobMaxxing(path = '/applications') {
   return chrome.tabs.create({ url: `${API_ORIGIN}${path}` });
 }
