@@ -1,15 +1,15 @@
 import { getInstantSession } from './auth/session.js';
 import { MSG, send } from './messages.js';
 
-export async function getSession() {
+async function getSession() {
   return send(MSG.GET_SESSION);
 }
 
-export async function signIn(email, password) {
+async function signIn(email, password) {
   return send(MSG.SIGN_IN, { email, password });
 }
 
-export async function signOut() {
+async function signOut() {
   return send(MSG.SIGN_OUT);
 }
 

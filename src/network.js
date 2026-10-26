@@ -8,7 +8,7 @@ function targetOrigin(input) {
   }
 }
 
-export function createNetworkUnavailableError(service, input, hint, cause) {
+function createNetworkUnavailableError(service, input, hint, cause) {
   const suffix = hint ? ` ${hint}` : '';
   const error = new Error(`Could not connect to ${service} at ${targetOrigin(input)}.${suffix}`);
   error.name = 'NetworkUnavailableError';
