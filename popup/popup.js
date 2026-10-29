@@ -20,6 +20,7 @@ let scrapedJobUrl = null;
 let scrapedSourceHost = null;
 let indexCache = [];
 let pageMatch = null;
+let activeTabUrl = '';
 let justSaved = null;
 let lastAction = null;
 let grabEligibility = { ok: false, code: null, message: '' };
@@ -141,9 +142,24 @@ async function refreshActiveTab() {
   } catch {
     tab = null;
   }
+  activeTabUrl = tab?.url || '';
   detectPageMatch(tab);
   renderNotice();
   await updateGrabHint(tab);
+}
+
+// Host access beyond the built-in job boards is optional and granted per site.
+// chrome.permissions.request must run synchronously inside the click gesture,
+// so it is based on the last known active-tab URL and awaited later.
+function requestSiteAccess(tabUrl) {
+  let url;
+  try {
+    url = new URL(tabUrl);
+  } catch {
+    return Promise.resolve(false);
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return Promise.resolve(false);
+  return chrome.permissions.request({ origins: [`${url.origin}/*`] }).catch(() => false);
 }
 
 // The side panel stays open while the user browses, so keep the active tab (and
@@ -284,6 +300,7 @@ btnApplyMatch.addEventListener('click', async () => {
 });
 
 btnGrab.addEventListener('click', async () => {
+  const siteAccess = requestSiteAccess(activeTabUrl);
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   grabError = null;
 
@@ -304,6 +321,9 @@ btnGrab.addEventListener('click', async () => {
 
   setGrabBusy(true);
   try {
+    if (!(await siteAccess)) {
+      throw new Error('Allow access to this site to capture it, or enter the role manually.');
+    }
     const res = await send(MSG.SCRAPE_TAB, { tabId: tab.id });
     if (!res?.ok || res.error) throw new Error(res?.error || 'Could not capture this page.');
     const scraped = res?.scraped || {};
@@ -576,7 +596,12 @@ function showFormError(msg) {
 }
 
 function esc(s) {
-  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 const mergeInput = document.getElementById('merge-input');

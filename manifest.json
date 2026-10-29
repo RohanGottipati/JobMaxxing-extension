@@ -5,7 +5,19 @@
   "minimum_chrome_version": "114",
   "description": "Capture job postings, track application status, and save the resume and cover letter you submitted.",
   "permissions": ["storage", "activeTab", "scripting", "alarms", "tabs", "cookies", "sidePanel"],
-  "host_permissions": ["*://*/*"],
+  "host_permissions": [
+    "https://job-maxxing.vercel.app/*",
+    "http://localhost:3000/*",
+    "https://*.supabase.co/*",
+    "*://*.linkedin.com/*",
+    "*://*.myworkdayjobs.com/*",
+    "*://*.greenhouse.io/*",
+    "*://*.lever.co/*",
+    "*://*.ashbyhq.com/*",
+    "*://*.dayforcehcm.com/*",
+    "*://*.dayforce.com/*"
+  ],
+  "optional_host_permissions": ["*://*/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

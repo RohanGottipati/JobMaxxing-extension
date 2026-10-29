@@ -10,8 +10,9 @@ Web side of the same workflow: the web app's [`LOCAL_TESTING.md`](https://github
 ## Local vs. committed (GitHub) configuration
 
 The committed code targets the **deployed** app: `config.example.js` defaults
-`APP_URL` to `https://job-maxxing.vercel.app`, and `manifest.json`
-`host_permissions` is broad (`*://*/*`), so it covers that origin. Your **local**
+`APP_URL` to `https://job-maxxing.vercel.app`. `manifest.json`
+`host_permissions` includes both `https://job-maxxing.vercel.app/*` and
+`http://localhost:3000/*`. Your **local**
 `config.js` (gitignored) is where you point the extension at the local web app
 for testing.
 
@@ -68,8 +69,9 @@ export const APP_URL = 'http://localhost:3000';   // ← local value
 2. **Load unpacked** → select this repository folder.
 3. Click the JobMaxxing toolbar icon to open the side panel.
 4. Sign in with the same JobMaxxing account as the web app. The extension mirrors
-   the web session via cookie (`localhost:3000` is always an allowed origin — see
-   `src/auth/web-sync.js`).
+   the web session via cookie for the `APP_URL` origin only — see
+   `src/auth/web-sync.js`. (There is no hardcoded localhost origin, so
+   `APP_URL` must be `http://localhost:3000` for local sign-in sync.)
 5. Open a supported posting (LinkedIn, Workday, Greenhouse, Lever, Ashby,
    Dayforce HCM), click **Grab this posting**, optionally attach a resume/cover
    letter, and save.
@@ -88,10 +90,11 @@ npm test    # node --test src/*.test.js
 
 ## 3. What does NOT need toggling
 
-- **`manifest.json` host permissions** are broad (`*://*/*`), so they already
-  cover both `http://localhost:3000` and the deployed origin (and every site the
-  Grab button captures). Nothing to edit per environment — only `config.js`
-  `APP_URL` decides which app the extension actually targets.
+- **`manifest.json` host permissions** already list both `http://localhost:3000/*`
+  and `https://job-maxxing.vercel.app/*`, so nothing to edit per environment —
+  only `config.js` `APP_URL` decides which app the extension actually targets.
+- Sites outside the built-in boards are requested per site when you click
+  **Grab this posting** (Chrome shows a one-time prompt for that site).
 
 ---
 
@@ -102,10 +105,9 @@ npm test    # node --test src/*.test.js
 - [ ] `APP_URL` = `https://job-maxxing.vercel.app` (production origin).
 - [ ] `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` = the production project's
       public values.
-- [ ] **`host_permissions` covers your `APP_URL` origin.** It is broad (`*://*/*`),
-      so any deployed origin is already covered for API calls and cookie access —
-      no per-origin entry to add. (This breadth is also what lets **Grab this
-      posting** read any site; it shows the "all websites" install warning.)
+- [ ] **`host_permissions` covers your `APP_URL` origin.** If you deploy to a
+      new origin, add it to `host_permissions` in `manifest.json` (API calls
+      and cookie sync need it).
 - [ ] No service-role or Gemini key anywhere in `config.js`.
 - [ ] Work through [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 
@@ -123,6 +125,6 @@ git diff --cached | grep -n "localhost:3000" || echo "clean"
 
 ```
 LOCAL  → config.js: APP_URL = 'http://localhost:3000'   + web app on :3000
-PROD   → config.js: APP_URL = 'https://job-maxxing.vercel.app'  (host_permissions already cover it)
+PROD   → config.js: APP_URL = 'https://job-maxxing.vercel.app'  (origin must be in host_permissions)
          (then reload / repackage)
 ```

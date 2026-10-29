@@ -161,11 +161,12 @@ gate — if a page can't be read, the form still opens for manual entry.
 | `sidePanel` | Host the persistent UI |
 | `alarms` | Optional follow-up reminders (when `prefs.followupEnabled` is set) |
 
-`host_permissions` is broad — **`*://*/*`** — so Grab can read the current page
-on any site (a side panel can't obtain per-site access on demand, so broad
-access is required). This produces Chrome's "read and change all your data on all
-websites" disclosure. Content-script badge detection stays limited to the
-supported boards. See [`docs/PRIVACY.md`](docs/PRIVACY.md).
+`host_permissions` is limited to the JobMaxxing origins (deployed and
+`localhost:3000`), `*.supabase.co` and the built-in job boards. All-sites access
+(`*://*/*`) is listed only under `optional_host_permissions`: when Grab is clicked
+on any other site, the side panel calls `chrome.permissions.request` for that one
+origin inside the click gesture. Content-script badge detection stays limited to
+the supported boards. See [`docs/PRIVACY.md`](docs/PRIVACY.md).
 
 ---
 

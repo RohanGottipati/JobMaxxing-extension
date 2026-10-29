@@ -10,7 +10,7 @@ Use this checklist for a developer-distributed archive or Chrome Web Store submi
 - Set `SUPABASE_URL` to the hosted project's HTTPS API URL.
 - Set `SUPABASE_PUBLISHABLE_KEY` to an `sb_publishable_...` key. Never package a secret or legacy service-role key.
 - Set `APP_URL` to the deployed JobMaxxing HTTPS origin.
-- `host_permissions` is broad (`*://*/*`), so it already covers the deployed origin, the Supabase project and localhost — there are no per-origin entries to edit or remove. Confirm the store listing and `PRIVACY.md` disclose the all-sites access this grants.
+- Confirm `host_permissions` in `manifest.json` includes the exact `APP_URL` origin (and the Supabase project host). All-sites access is optional (`optional_host_permissions`) and is requested per site from **Grab this posting**.
 - Verify that the deployed `/api/health`, `/privacy`, sign-in, capture and application deep links work from a clean Chrome profile.
 
 ## 2. Verify the package
@@ -40,7 +40,7 @@ The listing must not advertise unavailable alarms, export tools, automatic appli
 - Publish [PRIVACY.md](./PRIVACY.md) at an HTTPS URL controlled by the release operator.
 - Disclose handling of authentication information, personally identifiable information, website content and uploaded documents.
 - Explain each requested permission using the current behavior in the README.
-- Disclose the broad `*://*/*` host permission and the "read and change all your data on all websites" warning it produces, and explain it is used only so **Grab this posting** can read the current tab on any site (page content is read only when the user selects Grab).
+- Disclose the built-in job-board host access, and that access to any other site is requested per site (optional `*://*/*`) only when the user selects **Grab this posting** there.
 - Recheck Supabase RLS, Storage policies and API grants before submission.
 
 ## 5. Release record

@@ -21,9 +21,9 @@ Signing out clears the stored session, display data and cached application index
 
 ## Job-page access
 
-The extension holds broad host access (`*://*/*`) so that **Grab this posting** can capture a role from any career site, not only a fixed list of job boards. Chrome therefore shows a "read and change all your data on all websites" disclosure at install. Broad access is required because the side panel cannot request per-site permission on demand.
+At install, the extension only receives access to the built-in job boards (LinkedIn, Workday, Greenhouse, Lever, Ashby, Dayforce), the JobMaxxing web app and its Supabase backend. To capture a role from any other career site, **Grab this posting** asks Chrome for access to that one site when you click it; you can decline and enter the role manually, and revoke granted sites from Chrome's extension settings.
 
-Broad access does **not** mean pages are read in the background. The extension reads a page's content only in two explicit cases:
+Host access does **not** mean pages are read in the background. The extension reads a page's content only in two explicit cases:
 
 - **Automatic badge detection (supported boards only).** Content scripts on LinkedIn, Workday, Greenhouse, Lever, Ashby and Dayforce HCM look for job-posting signals and may set a `NEW` badge. They do not send a job description to JobMaxxing merely because the page was opened.
 - **On Grab.** When the user selects **Grab this posting** on any tab, the extension reads that page's available metadata, `JobPosting` structured data and visible job-description elements. The user can review and change the captured company, role, location, URL, description, deadline and recruiting season before saving. Manual entry is available when capture is not appropriate.
@@ -36,7 +36,7 @@ The extension sends application fields to authenticated routes under `/api/exten
 
 The extension uses a Supabase publishable key, which is intentionally public and does not bypass RLS. User JWTs identify the signed-in account. The matching web repository defines row-level and Storage policies that restrict records and files to their owner.
 
-The extension can read and write Supabase session cookies for the configured JobMaxxing web origin and localhost so website and extension sign-in/sign-out state stay aligned. It does not read unrelated cookies.
+The extension can read and write Supabase session cookies for the configured JobMaxxing web origin only so website and extension sign-in/sign-out state stay aligned. It does not read unrelated cookies.
 
 ## AI processing
 

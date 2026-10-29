@@ -70,7 +70,7 @@ export const APP_URL = "http://localhost:3000"; // or https://job-maxxing.vercel
 
 Get the URL and publishable key from the Supabase project's **Connect** dialog or **Settings → API Keys**. Publishable keys are intended for public clients and remain constrained by grants, Supabase Auth, RLS and Storage policies. Existing `config.js` files may continue to export the legacy `SUPABASE_ANON_KEY` during migration, but new configuration should use `SUPABASE_PUBLISHABLE_KEY`.
 
-Never place a Supabase secret/service-role key or Gemini key in the extension. For a production package, set `APP_URL` to the deployed HTTPS origin. The broad `host_permissions` (`*://*/*`) in `manifest.json` already covers it.
+Never place a Supabase secret/service-role key or Gemini key in the extension. For a production package, set `APP_URL` to the deployed HTTPS origin and make sure that exact origin is listed in `host_permissions` in `manifest.json`.
 
 4. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select this repository folder. Reload the extension after you edit `config.js`.
 
@@ -98,7 +98,7 @@ If the current page is already tracked, the side panel offers to update or open 
 
 ## Capture behavior
 
-The built-in job-board host patterns run a small content-script detector that sets the `NEW` badge when the current page looks like an individual posting (LinkedIn, Workday, Greenhouse, Lever, Ashby, Dayforce HCM). **Grab this posting** is not limited to those boards — it is always clickable and captures the current tab on any site only after you select it. A manual **Add application** action is available without scraping the page.
+The built-in job-board host patterns run a small content-script detector that sets the `NEW` badge when the current page looks like an individual posting (LinkedIn, Workday, Greenhouse, Lever, Ashby, Dayforce HCM). **Grab this posting** is not limited to those boards — it is always clickable and captures the current tab on any site only after you select it (on sites outside the built-in boards, Chrome first asks you to allow access to that site). A manual **Add application** action is available without scraping the page.
 
 The extension uses the web app's eight statuses: Saved, Applied, Online Assessment, Interview, Final Round, Offer, Rejected and Withdrawn. Moving a Saved role forward sets the applied date when one is not already present.
 
@@ -109,7 +109,7 @@ The extension uses the web app's eight statuses: Saved, Applied, Online Assessme
 - `tabs` reads the active tab, opens JobMaxxing and clears badge state when navigation starts.
 - `cookies` mirrors the Supabase session between the extension and the configured JobMaxxing origin.
 - `sidePanel` hosts the persistent interface; `alarms` supports previously configured local follow-up reminders.
-- **Host permissions are broad (`*://*/*`)** so **Grab this posting** can read the current page on any site. A side panel cannot request per-site access on demand, so broad access is required for capture to work off the built-in boards — this is why Chrome shows the "read and change all your data on all websites" disclosure. The page is only read when you explicitly select Grab; content-script badge detection still runs only on the supported boards.
+- **Host permissions are limited** to the built-in boards, the JobMaxxing web app and Supabase. On any other site, **Grab this posting** asks Chrome for access to that one site (optional `*://*/*`) when you click it. The page is only read when you explicitly select Grab; content-script badge detection still runs only on the supported boards.
 
 See [Privacy and data handling](docs/PRIVACY.md) for the exact local and remote data flow.
 

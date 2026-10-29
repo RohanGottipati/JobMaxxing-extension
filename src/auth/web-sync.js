@@ -92,12 +92,11 @@ function origin(value) {
   }
 }
 
-// Origins where the website may be running. The production origin comes only
-// from config.js so a development placeholder cannot silently become a cookie
-// target in a packaged release.
-const WEB_ORIGINS = Array.from(
-  new Set([origin(APP_URL), 'http://localhost:3000'].filter(Boolean)),
-);
+// The website origin comes only from config.js. Never add a fixed localhost
+// origin here: a packaged release would then hand the user's session to (and
+// accept a planted session from) whatever happens to listen on that port.
+// For local testing, set APP_URL to the local origin instead.
+const WEB_ORIGINS = [origin(APP_URL)].filter(Boolean);
 
 // Read and decode the website's Supabase session from its cookies, or null.
 // Checks each known web origin and returns the first valid session found.

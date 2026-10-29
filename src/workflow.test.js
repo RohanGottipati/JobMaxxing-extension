@@ -99,18 +99,26 @@ test('classifies scriptable tabs and expected Chrome injection failures', () => 
   assert.equal(injectionFailure(new Error('Unexpected internal failure')), null);
 });
 
-test('keeps Grab always available and can read any page', async () => {
+test('keeps Grab always available and requests other sites on demand', async () => {
   const popup = await readFile(new URL('../popup/popup.html', import.meta.url), 'utf8');
   // The button must not ship disabled — it is clickable on any page.
   assert.doesNotMatch(popup, /id="btn-grab"[^>]*disabled/);
 
-  // Grab reads the current page directly, so the extension holds broad host
-  // access rather than an allowlist of career sites.
+  // Built-in boards are granted at install; any other site is requested per
+  // origin from the Grab click, so all-sites access is optional, not required.
   const manifest = JSON.parse(
     await readFile(new URL('../manifest.json', import.meta.url), 'utf8'),
   );
-  assert.ok(manifest.host_permissions.includes('*://*/*'));
-  assert.equal(manifest.optional_host_permissions, undefined);
+  for (const broad of ['*://*/*', '<all_urls>', 'http://*/*', 'https://*/*']) {
+    assert.ok(!manifest.host_permissions.includes(broad), broad);
+  }
+  assert.deepEqual(manifest.optional_host_permissions, ['*://*/*']);
+  for (const pattern of manifest.content_scripts[0].matches) {
+    assert.ok(manifest.host_permissions.includes(pattern), pattern);
+  }
+
+  const popupScript = await readFile(new URL('../popup/popup.js', import.meta.url), 'utf8');
+  assert.match(popupScript, /chrome\.permissions\.request\(/);
 });
 
 test('round-trips referral and submitted package identifiers through API mapping', () => {

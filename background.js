@@ -42,7 +42,19 @@ chrome.sidePanel
   ?.setPanelBehavior?.({ openPanelOnActionClick: true })
   .catch((error) => console.warn('[jobmaxxing] side panel unavailable:', error));
 
+// Extension pages (side panel) may send any message. Content scripts run inside
+// third-party pages, so they may only report a detected posting.
+function isTrustedSender(msg, sender) {
+  if (sender.id !== chrome.runtime.id) return false;
+  if (sender.url?.startsWith(chrome.runtime.getURL(''))) return true;
+  return Boolean(sender.tab) && msg?.type === MSG.PAGE_DETECTED;
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!isTrustedSender(msg, sender)) {
+    respond(sendResponse, { ok: false, error: 'Unauthorized message sender.' });
+    return false;
+  }
   handleMessage(msg, sender)
     .then((result) => respond(sendResponse, result))
     .catch((err) => {
