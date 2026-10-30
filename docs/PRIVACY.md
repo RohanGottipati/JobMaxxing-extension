@@ -26,7 +26,7 @@ At install, the extension only receives access to the built-in job boards (Linke
 Host access does **not** mean pages are read in the background. The extension reads a page's content only in two explicit cases:
 
 - **Automatic badge detection (supported boards only).** Content scripts on LinkedIn, Workday, Greenhouse, Lever, Ashby and Dayforce HCM look for job-posting signals and may set a `NEW` badge. They do not send a job description to JobMaxxing merely because the page was opened.
-- **On Grab.** When the user selects **Grab this posting** on any tab, the extension reads that page's available metadata, `JobPosting` structured data and visible job-description elements. The user can review and change the captured company, role, location, URL, description, deadline and recruiting season before saving. Manual entry is available when capture is not appropriate.
+- **On Grab.** When the user selects **Grab this posting** on any tab, the extension reads that page's available metadata, `JobPosting` structured data and visible job-description elements. The user can review and change the captured company, role, location, URL, description, deadline and recruiting season before saving. To build the application-requirements checklist, Grab also reads the labels of the page's file-upload fields (never their contents) and short visible lines that mention application documents; these are analyzed inside the side panel and are not stored or sent to JobMaxxing. Manual entry is available when capture is not appropriate.
 
 No page content is read, stored or transmitted except through these two paths.
 

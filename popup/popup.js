@@ -13,6 +13,7 @@ import { STATUS_LABEL } from '../src/status-map.js';
 import { todayLocalDate } from '../src/util/date.js';
 import { defaultMergedPdfName } from '../src/util/pdf-name.js';
 import { recruitingSeasons } from '../src/util/recruiting-seasons.js';
+import { analyzeRequirements, REQUIREMENT_STATUS_LABEL } from '../src/requirements.js';
 import { findByJobUrl } from '../src/util/job-url.js';
 
 let editingId = null;
@@ -29,6 +30,9 @@ let grabHintResolved = false;
 let appliedDateIsAutomatic = false;
 let resumeFile = null;
 let coverLetterFile = null;
+let applicationSignals = null;
+let requirementsTimer = null;
+let mergeReturnView = null;
 
 const GRAB_ICON = `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3.5A1.5 1.5 0 015.5 2h5.086a1.5 1.5 0 011.06.44l3.914 3.914A1.5 1.5 0 0116 7.414V16.5A1.5 1.5 0 0114.5 18h-9A1.5 1.5 0 014 16.5v-13zM10.5 3H5.5a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V8h-3.5A1.5 1.5 0 0110.5 6.5V3zm1 0v3.5a.5.5 0 00.5.5H15.5L11.5 3zM7 11.25a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 017 11.25zm.75 2.5a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5z"/></svg>`;
 
@@ -72,6 +76,13 @@ const btnOpenMatch = document.getElementById('btn-open-match');
 const btnApplyMatch = document.getElementById('btn-apply-match');
 const recentEl = document.getElementById('recent');
 const recentList = document.getElementById('recent-list');
+const reqCard = document.getElementById('req-card');
+const reqSource = document.getElementById('req-source');
+const reqList = document.getElementById('req-list');
+const reqCombined = document.getElementById('req-combined');
+const reqCombinedText = document.getElementById('req-combined-text');
+const reqNotes = document.getElementById('req-notes');
+const reqEmpty = document.getElementById('req-empty');
 
 recruitingSeasons().forEach((season) =>
   fSeason.appendChild(new Option(season, season)),
@@ -349,6 +360,7 @@ btnGrab.addEventListener('click', async () => {
       description: scraped.description || existing?.description,
       sourceHost: scraped.sourceHost || existing?.sourceHost,
       jobUrl: scraped.jobUrl || existing?.jobUrl,
+      applicationSignals: scraped.applicationSignals,
     });
   } catch (error) {
     grabError = error instanceof Error ? error.message : 'Could not capture this page.';
@@ -373,6 +385,7 @@ function openAddForm(prefill = {}) {
   editingId = prefill.id || null;
   scrapedJobUrl = prefill.jobUrl || null;
   scrapedSourceHost = prefill.sourceHost || null;
+  applicationSignals = prefill.applicationSignals || null;
   formTitle.textContent = editingId ? 'Edit role' : 'New role';
   formStateLabel.textContent = editingId ? 'Saved' : 'Draft';
   fId.value = prefill.id || '';
@@ -397,6 +410,7 @@ function openAddForm(prefill = {}) {
   fCoverLetter.value = '';
   renderPackageFileState('resume', Boolean(prefill.submittedResumeVersionId));
   renderPackageFileState('coverLetter', Boolean(prefill.submittedCoverLetterId));
+  renderRequirements();
   fDupe.style.display = 'none';
   btnDelete.style.display = editingId ? '' : 'none';
   btnSave.disabled = false;
@@ -413,9 +427,86 @@ function closeForm() {
   editingId = null;
   scrapedJobUrl = null;
   scrapedSourceHost = null;
+  applicationSignals = null;
   resumeFile = null;
   coverLetterFile = null;
 }
+
+function joinList(values) {
+  if (values.length <= 2) return values.join(' and ');
+  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`;
+}
+
+function requirementItem(item) {
+  const li = document.createElement('li');
+  li.className = `req-item req-${item.status}`;
+  const name = document.createElement('span');
+  name.className = 'req-name';
+  name.textContent = item.label;
+  if (item.detail) {
+    const detail = document.createElement('span');
+    detail.className = 'req-detail';
+    detail.textContent = ` · ${item.detail}`;
+    name.appendChild(detail);
+  }
+  const pill = document.createElement('span');
+  pill.className = 'req-pill';
+  pill.textContent = REQUIREMENT_STATUS_LABEL[item.status] || item.status;
+  const evidence = document.createElement('span');
+  evidence.className = 'req-evidence';
+  evidence.textContent = item.source === 'form' ? item.evidence : `“${item.evidence}”`;
+  evidence.title = item.evidence;
+  li.append(name, pill, evidence);
+  return li;
+}
+
+// Page text is untrusted: everything below is rendered with textContent.
+function renderRequirements() {
+  const description = fDesc.value.trim();
+  reqCard.hidden = !description && !applicationSignals;
+  if (reqCard.hidden) return;
+
+  const result = analyzeRequirements({
+    description,
+    applicationText: applicationSignals?.text,
+    fileFields: applicationSignals?.fileFields,
+  });
+  reqSource.textContent = applicationSignals
+    ? 'Scanned from this page. Double-check the posting before you apply.'
+    : 'Based on the job description.';
+  reqList.replaceChildren(...result.items.map(requirementItem));
+
+  reqCombined.hidden = !result.combined;
+  if (result.combined) {
+    const documents = result.combined.documents.length
+      ? result.combined.documents
+      : result.items.filter((item) => item.status !== 'not_needed').map((item) => item.label);
+    reqCombinedText.textContent = documents.length
+      ? `Put your ${joinList(documents.map((label) => label.replace(/^\p{Lu}(?!\p{Lu})/u, (letter) => letter.toLowerCase())))} together in a single file.`
+      : 'This posting asks for your documents in a single file.';
+    reqCombined.title = result.combined.evidence;
+  }
+
+  const notes = [
+    result.pdf && 'PDF format requested.',
+    result.separate && 'Upload each document as a separate file.',
+    ...result.otherUploads.map((label) => `Other upload on this page: ${label}`),
+  ].filter(Boolean);
+  reqNotes.replaceChildren(
+    ...notes.map((note) => {
+      const li = document.createElement('li');
+      li.textContent = note;
+      return li;
+    }),
+  );
+  reqEmpty.hidden = Boolean(result.items.length || result.combined || notes.length);
+}
+
+fDesc.addEventListener('input', () => {
+  clearTimeout(requirementsTimer);
+  requirementsTimer = setTimeout(renderRequirements, 250);
+});
+document.getElementById('btn-req-merge').addEventListener('click', () => openMergeView());
 
 function ensureSeasonOption(value) {
   if (!value || [...fSeason.options].some((option) => option.value === value)) return;
@@ -620,7 +711,9 @@ function openMergeView() {
   setMergeStatus('');
   mergeDefaultName = defaultMergedPdfName();
   mergeName.value = mergeDefaultName;
+  mergeReturnView = formView.style.display !== 'none' ? formView : home;
   home.style.display = 'none';
+  formView.style.display = 'none';
   mergeView.style.display = 'flex';
   replayEnter(mergeView);
 
@@ -645,8 +738,10 @@ function openMergeView() {
 }
 function closeMergeView() {
   mergeView.style.display = 'none';
-  home.style.display = 'flex';
-  replayEnter(home);
+  const returnView = mergeReturnView || home;
+  mergeReturnView = null;
+  returnView.style.display = 'flex';
+  replayEnter(returnView);
 }
 
 function humanSize(bytes) {
@@ -766,7 +861,7 @@ async function combineAndDownload() {
   }
 }
 
-document.getElementById('btn-merge').addEventListener('click', openMergeView);
+document.getElementById('btn-merge').addEventListener('click', () => openMergeView());
 document.getElementById('btn-merge-back').addEventListener('click', closeMergeView);
 btnMergeGo.addEventListener('click', combineAndDownload);
 btnMergeClear.addEventListener('click', () => { mergeFiles = []; renderMergeList(); setMergeStatus(''); });

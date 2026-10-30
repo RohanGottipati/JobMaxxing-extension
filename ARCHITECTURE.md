@@ -76,6 +76,7 @@ JobMaxxing-extension/
 │   │   └── documents.js     # Uploads resume/cover-letter files to Supabase Storage
 │   ├── scrape/
 │   │   └── page.js          # detectJobPostingPage / scrapePage (run in page)
+│   ├── requirements.js      # Application-requirements checklist (pure, runs in popup)
 │   ├── document-policy.js   # File type/size rules + storage path builder
 │   ├── auth-gate.js         # Gates UI on auth state
 │   ├── util/                # date, job-url, pdf-name, recruiting-seasons, tab-url
@@ -119,7 +120,10 @@ User opens side panel, clicks "Grab this posting"  (always available, any page)
         ▼
 background: captureEligibility(url) → inject scrapePage
         │  returns {title, company, location, description, deadline,
-        │           recruitingSeason, sourceHost, jobUrl}
+        │           recruitingSeason, sourceHost, jobUrl, applicationSignals}
+        ▼
+popup: src/requirements.js analyzes description + applicationSignals
+        │  (upload-field labels, document instruction lines) → requirements checklist
         ▼
 User reviews fields, optionally attaches resume/cover-letter files
         │  popup → api/documents.js → upload files to Supabase Storage (job-documents)

@@ -528,6 +528,89 @@ label:focus-within {
   align-self: auto;
 }
 
+.req-card {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--elevated));
+}
+.req-card[hidden],
+.req-callout[hidden],
+.req-empty[hidden] { display: none !important; }
+.req-list,
+.req-notes { list-style: none; display: grid; gap: 5px; }
+.req-list:empty,
+.req-notes:empty { display: none; }
+.req-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--elevated);
+}
+.req-name { font-size: 12px; font-weight: 650; color: var(--foreground); }
+.req-detail { font-weight: 500; color: var(--muted-foreground); }
+.req-pill {
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid var(--border-strong);
+  color: var(--muted-foreground);
+  background: var(--background);
+}
+.req-required .req-pill {
+  color: var(--destructive);
+  border-color: color-mix(in srgb, var(--destructive) 38%, var(--border));
+  background: color-mix(in srgb, var(--destructive) 8%, var(--elevated));
+}
+.req-optional .req-pill {
+  color: var(--info);
+  border-color: color-mix(in srgb, var(--info) 35%, var(--border));
+  background: color-mix(in srgb, var(--info) 8%, var(--elevated));
+}
+.req-not_needed .req-name { color: var(--muted-foreground); text-decoration: line-through; }
+.req-evidence {
+  grid-column: 1 / -1;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.req-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--warning) 10%, var(--elevated));
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+.req-callout .btn-text { flex-shrink: 0; padding: 5px 9px; font-size: 11.5px; }
+.req-notes li,
+.req-empty {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+.req-notes li::before { content: "• "; }
+
 .merge-drop {
   display: flex;
   flex-direction: column;

@@ -146,6 +146,26 @@ test('detectJobPostingPage detects Dayforce job posting via route and DOM marker
   assert.equal(result.signal, 'supported-site');
 });
 
+test('scrapePage collects application instruction lines for the requirements checklist', () => {
+  setupMockDom({
+    location: 'https://careers.example.com/jobs/123',
+    elements: [createMockElement('h1', {}, 'Data Analyst Co-op')],
+    title: 'Data Analyst Co-op',
+  });
+  globalThis.document.body.innerText = [
+    'How to apply',
+    'Please submit your resume, cover letter and unofficial transcript as a single PDF.',
+    'Resume',
+    'We are an equal opportunity employer and value diversity at every level.',
+  ].join('\n');
+
+  const { applicationSignals } = scrapePage();
+  assert.deepEqual(applicationSignals.fileFields, []);
+  assert.deepEqual(applicationSignals.text, [
+    'Please submit your resume, cover letter and unofficial transcript as a single PDF.',
+  ]);
+});
+
 test('scrapePage extracts complete Dayforce HCM job posting information', () => {
   const nextData = JSON.stringify({
     props: {

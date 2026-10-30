@@ -73,8 +73,9 @@ export const APP_URL = 'http://localhost:3000';   // ← local value
    `src/auth/web-sync.js`. (There is no hardcoded localhost origin, so
    `APP_URL` must be `http://localhost:3000` for local sign-in sync.)
 5. Open a supported posting (LinkedIn, Workday, Greenhouse, Lever, Ashby,
-   Dayforce HCM), click **Grab this posting**, optionally attach a resume/cover
-   letter, and save.
+   Dayforce HCM), click **Grab this posting**, check the **Application
+   requirements** card (required/optional documents and any single-file
+   instruction), optionally attach a resume/cover letter, and save.
 6. Confirm it appears on the web app's `/applications`.
 
 > **After editing `config.js`, reload the extension** (`chrome://extensions` →

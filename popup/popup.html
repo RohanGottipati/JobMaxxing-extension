@@ -93,6 +93,18 @@
           <input type="hidden" id="f-id">
           <div class="compose-line"><label for="f-company">Company</label><input id="f-company" type="text" placeholder="Company name" autocomplete="organization" required></div>
           <div class="compose-line subject"><label for="f-title">Role</label><input id="f-title" type="text" placeholder="Role title" required></div>
+          <section id="req-card" class="req-card" aria-labelledby="req-heading" aria-live="polite" hidden>
+            <div class="package-heading">
+              <div><h3 id="req-heading">Application requirements</h3><p id="req-source">What this posting asks you to submit.</p></div>
+            </div>
+            <ul id="req-list" class="req-list"></ul>
+            <div id="req-combined" class="req-callout" hidden>
+              <p><strong>Submit as one file.</strong> <span id="req-combined-text"></span></p>
+              <button id="btn-req-merge" class="btn-text btn-sm" type="button">Combine PDFs</button>
+            </div>
+            <ul id="req-notes" class="req-notes"></ul>
+            <p id="req-empty" class="req-empty" hidden>No document requirements found on this page. Most applications still expect a resume.</p>
+          </section>
           <div class="field"><label for="f-location">Location</label><input id="f-location" type="text" placeholder="Remote / NYC"></div>
           <div class="field row">
             <div><label for="f-date">Applied date</label><input id="f-date" type="date"></div>

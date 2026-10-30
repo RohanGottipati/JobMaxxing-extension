@@ -11,6 +11,7 @@ Current release source: **1.3.0**, Manifest V3, Chrome 114 or newer. The reposit
 - Flags individual job pages with a `NEW` badge on LinkedIn, Workday, Greenhouse, Lever, Ashby and Dayforce HCM
 - **Grab this posting** captures the current page on **any** site — not just the boards above
 - Captures company, role, location, job URL, description, deadline and recruiting season when available (via `JobPosting` structured data, known ATS containers, then a generic text heuristic)
+- Shows an **Application requirements** checklist in the capture form: which documents the posting asks for (resume/CV, cover letter, transcript, proof of enrollment, portfolio, writing sample, references, recommendation letters), whether each is required, optional or not needed, and whether everything must be combined into a single file (with a shortcut to Combine PDFs). It is computed locally from the description, the page's instruction text and its upload fields, and nothing extra is saved
 - Supports manual entry, and still opens the form to add a role by hand when a page cannot be read
 - Saves PDF or DOCX resume and cover-letter copies with the application
 - Detects duplicate job URLs and job descriptions

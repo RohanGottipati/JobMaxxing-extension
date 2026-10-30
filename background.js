@@ -341,6 +341,14 @@ async function handleMessage(msg, sender) {
           recruitingSeason: scraped.recruitingSeason || '',
           sourceHost: scraped.sourceHost || '',
           jobUrl: scraped.jobUrl || '',
+          applicationSignals: {
+            fileFields: Array.isArray(scraped.applicationSignals?.fileFields)
+              ? scraped.applicationSignals.fileFields
+              : [],
+            text: Array.isArray(scraped.applicationSignals?.text)
+              ? scraped.applicationSignals.text
+              : [],
+          },
         },
       };
     }

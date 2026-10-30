@@ -925,6 +925,64 @@ export function scrapePage() {
     return '';
   }
 
+  // Raw signals for the application-requirements checklist: the page's
+  // file-upload fields and short instruction lines (often outside the
+  // description container, e.g. "How to apply") that mention documents.
+  function fileInputLabel(input) {
+    const labelText = [...(input.labels || [])].map(text).filter(Boolean).join(' ');
+    if (labelText) return labelText;
+    const aria = input.getAttribute?.('aria-label');
+    if (aria) return normalizeText(aria);
+    const labelledBy = String(input.getAttribute?.('aria-labelledby') || '')
+      .split(/\s+/)
+      .map((id) => id && text(document.getElementById(id)))
+      .filter(Boolean)
+      .join(' ');
+    if (labelledBy) return labelledBy;
+    let ancestor = input.parentElement;
+    for (let depth = 0; ancestor && depth < 5; depth += 1, ancestor = ancestor.parentElement) {
+      // Stop once the container holds other uploads; its first label would
+      // belong to a different field.
+      if ((ancestor.querySelectorAll?.('input[type="file"]').length || 0) > 1) break;
+      const labelElement = ancestor.querySelector?.(
+        'label, legend, [class*="label" i], [data-automation-id*="label" i], h2, h3, h4',
+      );
+      const candidate = text(labelElement);
+      if (candidate && candidate.length <= 200) return candidate;
+    }
+    return '';
+  }
+
+  function applicationSignals() {
+    const fileFields = [...document.querySelectorAll('input[type="file"]')]
+      .slice(0, 20)
+      .map((input) => {
+        const label = fileInputLabel(input).split('\n')[0].slice(0, 160);
+        return {
+          label,
+          name: String(input.getAttribute?.('name') || input.getAttribute?.('id') || '').slice(0, 80),
+          required: Boolean(input.required) || input.getAttribute?.('aria-required') === 'true',
+        };
+      })
+      .filter((field) => field.label || field.name);
+
+    const documentWords =
+      /r[eé]sum[eé]|curriculum vitae|\bcvs?\b|cover[\s-]*letter|transcript|portfolio|writing sample|work sample|references|recommendation|letters? of (?:interest|intent|motivation)|enrol{1,2}ment/i;
+    const instructionWords =
+      /\b(?:submit|upload|attach|include|provide|send|required|optional|must|please|single|one (?:pdf|file|document)|combine|merge|separate)\b/i;
+    const seen = new Set();
+    const lines = String(document.body?.innerText || '')
+      .split('\n')
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter((line) => {
+        if (line.length < 25 || line.length > 400 || seen.has(line)) return false;
+        seen.add(line);
+        return documentWords.test(line) && instructionWords.test(line);
+      })
+      .slice(0, 40);
+    return { fileFields, text: lines };
+  }
+
   const structured = structuredData();
   const adapter = adapterData();
   const selected = selectedDescription();
@@ -959,5 +1017,6 @@ export function scrapePage() {
     recruitingSeason: recruitingSeason(`${title}\n${description}`),
     sourceHost: location.hostname,
     jobUrl: location.href,
+    applicationSignals: applicationSignals(),
   };
 }
